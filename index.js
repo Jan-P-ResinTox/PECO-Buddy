@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const key = manualKeyInput.value.trim();
                         window.localStorage.setItem('PECO_BUDDY_CUSTOM_KEY', key);
                         if (key) {
-                            ToastService.show("Manual API Key saved successfully.", "success");
+                            ToastService.show("Manual API Key saved successfully to local storage.", "success");
                             saveKeyBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Saved';
                             setTimeout(() => { saveKeyBtn.innerText = 'Save Key'; }, 2000);
                         } else {
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
                 foot.innerHTML = `<button class="bg-teal-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Done</button>`;
                 foot.onclick = () => {
-                    // One final check to save if they entered something but didn't hit save
+                    // One final check to save if they entered something but didn't hit save button
                     const input = modal.querySelector('#modal-manual-key-input');
                     if (input) {
                         window.localStorage.setItem('PECO_BUDDY_CUSTOM_KEY', input.value.trim());
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showUserManual = () => {
-            showModal('User Manual v8.0 Beta', `<div class="modal-body p-6">${templates.userManualView}</div>`, (modal) => {
+            showModal('User Manual v8.1 Beta', `<div class="modal-body p-6">${templates.userManualView}</div>`, (modal) => {
                 const searchInput = modal.querySelector('#manual-search-input');
                 const contentContainer = modal.querySelector('#manual-content-container');
                 const sections = modal.querySelectorAll('.manual-section');
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showRationale = () => {
-            showModal('Version 8.0 Rationale', `<div class="modal-body p-6">${templates.versionRationaleView}</div>`, null, (modal, close) => {
+            showModal('Version 8.1 Rationale', `<div class="modal-body p-6">${templates.versionRationaleView}</div>`, null, (modal, close) => {
                 const foot = modal.querySelector('.modal-container').appendChild(document.createElement('div'));
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
                 foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold">Close</button>`;

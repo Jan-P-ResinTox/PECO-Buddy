@@ -1,13 +1,20 @@
-Copyright & Licence Copyright (c) 2025 Evidence-Based Toxicology Collaboration
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-Concept and Development by: Joel Chan, Jan-Peter Nilsson, Paul Whaley, et al.
+# Run and deploy your AI Studio app
 
-Toolkit Development & Code by: Jan-Peter Nilsson
+This contains everything you need to run your app locally.
 
-Licence Terms Permission is hereby granted, to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software for its intended purpose, subject to the following conditions:
+View your app in AI Studio: https://ai.studio/apps/drive/1ysI8UwmfYSTNxTjUdTjeBPu1KxZDBfSR
 
-You are free to use the Beta version of this Software in its original, unmodified form, for trial purposes only. The above copyright notice and this permission notice is included in the version of the Software, approved website or server you use. You acknowledge that using this software, effectively means you are accepting a conditional NDA.
+## Run Locally
 
-Without permission granted from the author of the software, the following actions are expressly forbidden:
+**Prerequisites:**  Node.js
 
-You may NOT, outside the EBTC-Workgroups disclose, take screenshots, hand out website address, translate, or in any digital or analog media or form, record core processes or functions that you may gain knowledge of. You may NOT distribute, modify, adapt, translate, or create derivative works based on the Software's source code. You may NOT decompile, reverse engineer, disassemble, or otherwise attempt to derive the source code for the Software. You may NOT merge or incorporate the Software or its source code into any other software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

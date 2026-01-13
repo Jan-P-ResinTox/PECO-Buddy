@@ -28,7 +28,7 @@ export const callGeminiAPI = async (prompt, schema, statusContainer = null, conf
   
   RESPONSE RULES:
   - ALWAYS respond in valid JSON matching the provided schema.
-  - Focus strictly on scientific validity and methodological rigor.`;
+  - Focus strictly on scientific validity and methodological rigour. Use UK English spelling throughout (e.g., analyse, synthesise, authorised, organisation, colour).`;
 
   try {
     const response = await ai.models.generateContent({
@@ -60,7 +60,7 @@ export const callGeminiAPI = async (prompt, schema, statusContainer = null, conf
 export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer) => {
   const prompt = `Generate 3 research questions for a ${studyType} based on: "${scope}".
   Ensure high precision. Distinguish between the exposure agent and the method of measurement (matrix).
-  Return JSON with questions array containing full_statement, population, exposure, comparison, outcome.`;
+  Return JSON with questions array containing full_statement, population, exposure, comparison, outcome. Use UK English spelling for all output.`;
 
   const schema = {
     type: Type.OBJECT,
@@ -107,7 +107,7 @@ export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, s
   Context: "${fullText}". 
   AGENT vs MATRIX: Identify the chemical/agent (e.g. Lead) as the exposure. Identify the matrix (e.g. Cord blood) only as a descriptor of where it is measured.
   NEVER put a measurement matrix in the population field.
-  Use ';' for alternative measurement options.`;
+  Use ';' for alternative measurement options. Use UK English spelling.`;
   
   const schema = {
     type: Type.OBJECT,
@@ -128,9 +128,9 @@ export const callQuestionQualityAPI = async (question, peco, statusContainer) =>
   AUDIT RULES:
   1. LOGICAL OPERATORS: Do NOT flag ';' (OR) or '&' (AND) as ambiguity. They are signs of scientific precision.
   2. AGENT CHECK: If the exposure field ONLY contains a matrix (e.g. "Umbilical cord blood") without an agent (e.g. "Lead"), flag it as a missing exposure agent.
-  3. COMPONENT CHECK: If a component has text, it is NOT missing.
+  3. COMPONENT CHECK: If a component has text, it is NOT missing. Only return a component in 'missing_components' if it is truly empty.
   
-  Return JSON with strengths, missing_components, and ambiguities.`;
+  Return JSON with strengths, missing_components, and ambiguities. Use UK English spelling.`;
 
   const schema = {
     type: Type.OBJECT,
@@ -158,12 +158,13 @@ export const callQuestionQualityAPI = async (question, peco, statusContainer) =>
 };
 
 export const callPecoSynthesizerAPI = async (peco) => {
-  const prompt = `Synthesize one formal scientific research question using strictly: ${JSON.stringify(peco)}.
+  const prompt = `Synthesise one formal scientific research question using strictly: ${JSON.stringify(peco)}.
   RULES: 
   - Convert '&' into the word "and".
   - Convert ';' into the word "or".
   - Ensure the distinction between measurement matrices and agents is preserved (e.g., "...measured via umbilical cord blood or maternal blood...").
-  - Use formal EBTC publication style.`;
+  - Use formal EBTC publication style with UK English spelling.
+  Example: "Exposure: Lead (measured in: cord blood ; maternal blood)" should become "...exposure to lead, measured via maternal blood or umbilical cord blood..."`;
   
   const schema = {
     type: Type.OBJECT,

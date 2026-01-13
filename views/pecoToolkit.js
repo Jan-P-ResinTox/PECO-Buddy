@@ -18,7 +18,7 @@ const BASIC_STUDY_TYPES = [
 
 const EXTENDED_STUDY_TYPES = [
     { id: 'cluster_rct', name: 'Cluster RCT', icon: 'fa-people-roof' },
-    { id: 'non_rct', name: 'Non-Randomized Trial', icon: 'fa-vial-circle-check' },
+    { id: 'non_rct', name: 'Non-Randomised Trial', icon: 'fa-vial-circle-check' },
     { id: 'quasi_experimental', name: 'Quasi-Experimental', icon: 'fa-flask-vial' },
     { id: 'nested_case_control', name: 'Nested Case-Control', icon: 'fa-layer-group' },
     { id: 'cross_sectional', name: 'Cross-Sectional', icon: 'fa-chart-pie' },
@@ -163,7 +163,7 @@ function initIdeationView(container) {
       btn.onclick = () => {
         const q = appState.authorWorkflow.ideationData.generatedSuggestions[btn.dataset.index];
         appState.authorWorkflow.clarityData.researchQuestion = q.full_statement;
-        // Ensure state is fully fresh
+        // Reset PECO state to prevent lingering elements from previous attempts
         appState.authorWorkflow.liveCoAuthorData.peco = { 
           population: q.population || '', 
           exposure: q.exposure || '', 
@@ -199,8 +199,10 @@ function initClarityView(container, autoRun = false) {
 
       if (appState.analysisEngine === 'ai') {
           if (providedPeco) {
+            // Use provided manual state directly
             peco = { ...providedPeco };
           } else {
+            // Re-extract fresh from question string
             const prelim = await GeminiAPI.callDomainIdentifierAPI(q);
             peco = await GeminiAPI.callSpecialistPecoExtractorAPI(prelim.domain, prelim, q, appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General');
           }
@@ -214,10 +216,11 @@ function initClarityView(container, autoRun = false) {
                   }
               });
           }
-          analysis = { strengths: ["Rule matching completed."], missing_components: [], ambiguities: [] };
+          analysis = { strengths: ["Local rule matching completed."], missing_components: [], ambiguities: [] };
           Object.keys(peco).forEach(k => { if(!peco[k]) analysis.missing_components.push(k); });
       }
 
+      // Synchronise state
       appState.authorWorkflow.liveCoAuthorData.peco = peco;
       appState.authorWorkflow.clarityData.analysis = analysis;
       
@@ -251,7 +254,7 @@ function initClarityView(container, autoRun = false) {
           </div>
           <div class="flex gap-4 items-center">
             <button id="toggle-gauge-visibility-btn" class="text-xs font-bold text-slate-400 hover:text-teal-600 underline">${appState.showScoreGauge ? 'Hide Gauge' : 'Show Gauge'}</button>
-            <button id="toggle-gauge-btn" class="text-xs font-bold text-teal-600 underline">${isAnalysisCollapsed ? 'View Dashboard' : 'Minimize Dashboard'}</button>
+            <button id="toggle-gauge-btn" class="text-xs font-bold text-teal-600 underline">${isAnalysisCollapsed ? 'View Dashboard' : 'Minimise Dashboard'}</button>
           </div>
         </div>
 
@@ -383,7 +386,7 @@ function initPecoWorkshopView(container) {
   const saveBtn = container.querySelector('#save-to-notebook-btn');
   const reportBtn = container.querySelector('#view-transparency-report-btn');
 
-  if (qDisplay) qDisplay.textContent = q ? `"${q}"` : 'No finalized question found yet.';
+  if (qDisplay) qDisplay.textContent = q ? `"${q}"` : 'No finalised question found yet.';
   if (pecoDisplay) {
       pecoDisplay.innerHTML = `
         <table id="peco-final-table" class="w-full text-sm border-collapse rounded-2xl overflow-hidden border border-slate-200">
@@ -422,7 +425,7 @@ function renderTransparencyReport() {
     
     const peco = appState.authorWorkflow.liveCoAuthorData.peco;
     const q = appState.authorWorkflow.clarityData.researchQuestion;
-    const timestamp = new Date().toLocaleString();
+    const timestamp = new Date().toLocaleString('en-GB');
     
     document.getElementById('report-timestamp').textContent = timestamp;
     document.getElementById('report-final-question').textContent = `"${q}"`;
@@ -462,7 +465,7 @@ function renderTransparencyReport() {
                 "studyType": appState.authorWorkflow.ideationData.selectedStudyType?.name
             },
             "provenance": {
-                "generatedBy": "PECO-Buddy v8.0 Beta",
+                "generatedBy": "PECO-Buddy v8.1 Beta",
                 "timestamp": timestamp,
                 "author": "EBTC Researcher"
             }
