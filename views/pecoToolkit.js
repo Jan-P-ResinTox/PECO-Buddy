@@ -94,7 +94,7 @@ function showTransparencyLogModal() {
             
             <div class="space-y-4">
                 <div>
-                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Scientific Semantic Context</h5>
+                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Scientific Scientific Context</h5>
                     <div class="p-4 bg-slate-900 text-slate-300 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed">${escapeHtml(item.prompt)}</div>
                 </div>
                 <div>
@@ -362,7 +362,7 @@ function initClarityView(container, autoRun = false) {
                                 ${formatPecoForDisplay(peco[key])}
                             </div>
                             
-                            <div class="peco-edit-mode hidden">
+                            <div class="peco-edit-mode">
                                 <textarea class="w-full text-sm p-3 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 outline-none font-bold" rows="2">${peco[key]}</textarea>
                                 <button class="save-peco-btn w-full bg-teal-600 text-white text-[10px] py-2 rounded-xl mt-3 font-bold uppercase shadow-sm">Sync and Re-Analyse</button>
                             </div>
@@ -402,7 +402,8 @@ function initClarityView(container, autoRun = false) {
       const key = card.dataset.key;
       card.querySelector('.edit-peco-btn').onclick = () => {
         card.classList.toggle('is-editing');
-        card.querySelector('.peco-edit-mode textarea').focus();
+        const textarea = card.querySelector('.peco-edit-mode textarea');
+        if (textarea) textarea.focus();
       };
       card.querySelector('.save-peco-btn').onclick = async (e) => {
         const btn = e.target;
