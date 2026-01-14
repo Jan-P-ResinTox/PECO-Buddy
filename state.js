@@ -15,11 +15,12 @@ export const appState = {
     nlpCurrentPage: 1,
     nlpSearchQuery: '',
     nlpSort: { key: 'term', direction: 'asc' },
-    globalApiKey: '', // Kept for state compatibility, though process.env.API_KEY is used for calls
+    globalApiKey: '', 
     notebookData: {
         researchScope: '', initialQuestion: '', finalQuestion: '', 
         population: '', exposure: '', comparison: '', outcome: '', notes: ''
     },
+    interactionLog: [], // Complete trail of prompts, contexts, and JSON responses
 };
 
 export const dom = {

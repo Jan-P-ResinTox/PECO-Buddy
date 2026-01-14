@@ -2,6 +2,7 @@ import { appState, dom } from '../state.js';
 import { ToastService } from '../components/toast.js';
 import * as GeminiAPI from '../api/gemini.js';
 import { Type } from "@google/genai";
+import { showModal } from '../components/modal.js';
 import { extractTextFromFile, showLoading, showError, escapeHtml, handleExport, formatPecoForDisplay } from '../utils.js';
 import { PECO_MAP } from '../config.js';
 
@@ -69,6 +70,9 @@ export function initReviewerToolkitView() {
                 return;
             }
 
+            // Reset log for new audit session
+            appState.interactionLog = [];
+            
             runAuditBtn.disabled = true;
             reportContainer.innerHTML = ''; // Clear previous reports
             showLoading(reportContainer, 'Preparing manuscript for analysis...');
@@ -261,6 +265,70 @@ function updateSectionResult(sectionName, peco) {
 }
 
 /**
+ * Renders the final interaction log modal.
+ */
+function showTransparencyLogModal() {
+    const logItems = appState.interactionLog.map((item, idx) => `
+        <div class="p-6 border-b last:border-0 hover:bg-slate-50 transition-colors">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-extrabold text-xs">${idx + 1}</span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${new Date(item.timestamp).toLocaleTimeString('en-GB')}</span>
+                </div>
+                <span class="px-2 py-1 bg-teal-100 text-teal-700 rounded text-[9px] font-extrabold uppercase">Step Completed</span>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Scientific Prompt</h5>
+                    <div class="p-4 bg-slate-900 text-slate-300 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed">${escapeHtml(item.prompt)}</div>
+                </div>
+                <div>
+                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Gemini JSON Response</h5>
+                    <div class="p-4 bg-teal-50 text-teal-900 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed border border-teal-100">${escapeHtml(item.response)}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    const content = `
+        <div class="report-modal-content flex-grow overflow-y-auto custom-scrollbar">
+            <div class="p-8 bg-slate-50 border-b">
+                <p class="text-sm text-slate-600 mb-4">This log contains the complete semantic interaction trail used to generate the current audit. Every prompt sent to the model and its raw JSON response is preserved for scientific reproducibility.</p>
+                <div class="flex gap-4">
+                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Total Steps: ${appState.interactionLog.length}</div>
+                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Engine: Gemini-3-Flash</div>
+                </div>
+            </div>
+            <div class="bg-white">
+                ${logItems.length > 0 ? logItems : '<p class="p-12 text-center text-slate-400 italic">No interaction logs available for this session.</p>'}
+            </div>
+        </div>
+    `;
+
+    showModal('Extended Transparency Log', content, null, (modal, close) => {
+        const container = modal.querySelector('.modal-container, .report-modal-container');
+        const foot = container.appendChild(document.createElement('div'));
+        foot.className = 'modal-footer p-4 border-t flex justify-end gap-3';
+        foot.innerHTML = `
+            <button class="bg-slate-200 text-slate-700 px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest">Close</button>
+            <button id="download-log-btn" class="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Download Log (.json)</button>
+        `;
+        foot.querySelector('button').onclick = close;
+        foot.querySelector('#download-log-btn').onclick = () => {
+            const blob = new Blob([JSON.stringify(appState.interactionLog, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `peco-interaction-log-${new Date().getTime()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            ToastService.show('Log downloaded successfully.', 'success');
+        };
+    }, true);
+}
+
+/**
  * Renders the final consistency synthesis card.
  */
 function renderAuditSynthesis(data, container) {
@@ -339,12 +407,19 @@ function renderAuditSynthesis(data, container) {
                     <i class="fa-solid fa-shield-halved text-teal-600"></i> EBTC-Workgroup Authorised Audit Report
                 </div>
                 <div class="flex gap-3">
+                    <button id="show-transparency-log-btn" class="bg-white border border-slate-200 text-slate-600 font-extrabold py-3 px-6 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"><i class="fa-solid fa-code"></i> Extended Transparency</button>
                     <button id="export-audit-docx-btn" class="bg-slate-800 text-white font-extrabold py-3 px-6 rounded-2xl text-[10px] uppercase tracking-widest shadow-lg hover:bg-black transition-all flex items-center gap-2"><i class="fa-solid fa-file-word"></i> Export DOCX</button>
                     <button id="export-audit-pdf-btn" class="bg-rose-600 text-white font-extrabold py-3 px-6 rounded-2xl text-[10px] uppercase tracking-widest shadow-lg hover:bg-rose-700 transition-all flex items-center gap-2"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
                 </div>
             </div>
         </div>
     `;
+
+    // Attach interaction log handler
+    const logBtn = container.querySelector('#show-transparency-log-btn');
+    if (logBtn) {
+        logBtn.addEventListener('click', showTransparencyLogModal);
+    }
 
     // Attach export handlers
     const pdfBtn = container.querySelector('#export-audit-pdf-btn');

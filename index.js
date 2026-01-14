@@ -141,7 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 updateSelection();
             }, (modal, close) => {
-                const foot = modal.querySelector('.modal-container').appendChild(document.createElement('div'));
+                const container = modal.querySelector('.modal-container, .report-modal-container');
+                const foot = container.appendChild(document.createElement('div'));
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
                 foot.innerHTML = `<button class="bg-teal-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Done</button>`;
                 foot.onclick = () => {
@@ -201,7 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }, (modal, close) => {
-                const foot = modal.querySelector('.modal-container').appendChild(document.createElement('div'));
+                const container = modal.querySelector('.modal-container, .report-modal-container');
+                const foot = container.appendChild(document.createElement('div'));
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
                 foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold">Close Manual</button>`;
                 foot.onclick = close;
@@ -210,7 +212,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const showRationale = () => {
             showModal('Version 8.1 Rationale', `<div class="modal-body p-6">${templates.versionRationaleView}</div>`, null, (modal, close) => {
-                const foot = modal.querySelector('.modal-container').appendChild(document.createElement('div'));
+                const container = modal.querySelector('.modal-container, .report-modal-container');
+                const foot = container.appendChild(document.createElement('div'));
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
                 foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold">Close</button>`;
                 foot.onclick = close;
@@ -219,7 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const showCopyright = () => {
             showModal('Legal Notice', `<div class="modal-body p-6">${templates.copyrightView}</div>`, null, (modal, close) => {
-                const foot = modal.querySelector('.modal-container').appendChild(document.createElement('div'));
+                const container = modal.querySelector('.modal-container, .report-modal-container');
+                const foot = container.appendChild(document.createElement('div'));
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
                 foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold">Close</button>`;
                 foot.onclick = close;

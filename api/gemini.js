@@ -1,66 +1,71 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { appState } from '../state.js';
 import { extractJsonFromString, showError } from '../utils.js';
 
-// Initialization using the mandatory SDK pattern
+/**
+ * Initialization of the Google GenAI SDK.
+ */
 const getAI = () => {
-  // Always check for a custom manually entered key first
   const customKey = window.localStorage.getItem('PECO_BUDDY_CUSTOM_KEY');
   const apiKey = customKey || process.env.API_KEY;
+  if (!apiKey) throw new Error("API Key required. Please connect in Settings.");
   return new GoogleGenAI({ apiKey });
 };
 
 export const callGeminiAPI = async (prompt, schema, statusContainer = null, config = {}) => {
-  const ai = getAI();
   const modelName = 'gemini-3-flash-preview';
 
-  const systemInstruction = `You are an expert scientific co-author for the Evidence-Based Toxicology Collaboration (EBTC).
-  Your task is to facilitate rigorous research design using the PECO framework.
+  const systemInstruction = `You are an expert scientific co-author for the EBTC.
   
-  LOGICAL GRAMMAR RULES:
-  1. Use '&' to denote 'AND' / Co-existence.
-  2. Use ';' to denote 'OR' / Alternatives.
+  PECO RULES:
+  - Identify Population, Exposure, Comparison, and Outcome.
+  - If a measurement site/matrix is mentioned (e.g. cord blood), wrap it in curly braces: {matrix:maternal blood}.
+  - Use '&' for AND, ';' for OR within fields.
+  - NEVER use HTML or CSS in the JSON strings.
   
-  CONTEXTUAL RIGOR RULES:
-  - DISTINGUISH AGENT FROM MATRIX: "Lead" is the exposure. "Cord blood" is the measurement matrix. 
-  - PROHIBITED POPULATION: NEVER list a biological matrix (Blood, Urine, Cord, Serum, Tissues) as the 'Population' or 'Subject'.
-  - Measurement matrices must be noted in parentheses within the Exposure or Outcome field if relevant, e.g., "Lead (measured in: cord blood)".
-  - If multiple measurement matrices are alternatives, preserve the "OR" logic using ';'.
-  
-  RESPONSE RULES:
-  - ALWAYS respond in valid JSON matching the provided schema.
-  - Focus strictly on scientific validity and methodological rigour. Use UK English spelling throughout (e.g., analyse, synthesise, authorised, organisation, colour).`;
+  OUTPUT:
+  - Return ONLY valid JSON matching the schema.
+  - Use UK English spelling.`;
 
   try {
-    const response = await ai.models.generateContent({
+    const ai = getAI();
+    const result = await ai.models.generateContent({
       model: modelName,
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction,
         responseMimeType: schema ? "application/json" : "text/plain",
         responseSchema: schema || undefined,
-        temperature: 0.1, 
-        seed: 42,
+        temperature: 0.1,
         ...config
       }
     });
 
-    const text = response.text;
-    if (!text) throw new Error('Empty response from AI.');
-    
+    const text = result.text;
+    if (!text) throw new Error("Empty response.");
+
+    appState.interactionLog.push({
+      timestamp: new Date().toISOString(),
+      prompt,
+      response: text
+    });
+
     if (schema) {
-      return JSON.parse(extractJsonFromString(text));
+      const jsonStr = extractJsonFromString(text);
+      return JSON.parse(jsonStr);
     }
     return text;
   } catch (error) {
+    console.error("Gemini Error:", error);
     if (statusContainer) showError(statusContainer, error.message);
     throw error;
   }
 };
 
 export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer) => {
-  const prompt = `Generate 3 research questions for a ${studyType} based on: "${scope}".
-  Ensure high precision. Distinguish between the exposure agent and the method of measurement (matrix).
-  Return JSON with questions array containing full_statement, population, exposure, comparison, outcome. Use UK English spelling for all output.`;
+  const prompt = `Generate 3 research questions for a ${studyType} based on: "${scope}". 
+  Tag measurement sites as {matrix:...}. 
+  Return JSON with "questions" array containing full_statement, population, exposure, comparison, outcome.`;
 
   const schema = {
     type: Type.OBJECT,
@@ -86,8 +91,8 @@ export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer)
   return await callGeminiAPI(prompt, schema, statusContainer);
 };
 
-export const callDomainIdentifierAPI = async (text, statusContainer) => {
-  const prompt = `Identify scientific domain and raw PECO concepts: "${text}".`;
+export const callDomainIdentifierAPI = async (text) => {
+  const prompt = `Identify scientific domain and PECO concepts for: "${text}". Tag matrices as {matrix:...}.`;
   const schema = {
     type: Type.OBJECT,
     properties: {
@@ -99,16 +104,11 @@ export const callDomainIdentifierAPI = async (text, statusContainer) => {
     },
     required: ["domain", "raw_subject_population", "raw_intervention_exposure", "raw_comparison", "raw_outcome"]
   };
-  return await callGeminiAPI(prompt, schema, statusContainer);
+  return await callGeminiAPI(prompt, schema);
 };
 
-export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, studyType, statusContainer) => {
-  const prompt = `Refine PECO components for a ${studyType} in ${domain}. 
-  Context: "${fullText}". 
-  AGENT vs MATRIX: Identify the chemical/agent (e.g. Lead) as the exposure. Identify the matrix (e.g. Cord blood) only as a descriptor of where it is measured.
-  NEVER put a measurement matrix in the population field.
-  Use ';' for alternative measurement options. Use UK English spelling.`;
-  
+export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, studyType) => {
+  const prompt = `Extract PECO for ${studyType} in ${domain}. Text: "${fullText}". Tag matrices as {matrix:...}.`;
   const schema = {
     type: Type.OBJECT,
     properties: {
@@ -119,19 +119,11 @@ export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, s
     },
     required: ["population", "exposure", "comparison", "outcome"]
   };
-  return await callGeminiAPI(prompt, schema, statusContainer);
+  return await callGeminiAPI(prompt, schema);
 };
 
-export const callQuestionQualityAPI = async (question, peco, statusContainer) => {
-  const prompt = `Peer review this research question: "${question}" using its PECO components: ${JSON.stringify(peco)}.
-  
-  AUDIT RULES:
-  1. LOGICAL OPERATORS: Do NOT flag ';' (OR) or '&' (AND) as ambiguity. They are signs of scientific precision.
-  2. AGENT CHECK: If the exposure field ONLY contains a matrix (e.g. "Umbilical cord blood") without an agent (e.g. "Lead"), flag it as a missing exposure agent.
-  3. COMPONENT CHECK: If a component has text, it is NOT missing. Only return a component in 'missing_components' if it is truly empty.
-  
-  Return JSON with strengths, missing_components, and ambiguities. Use UK English spelling.`;
-
+export const callQuestionQualityAPI = async (question, peco) => {
+  const prompt = `Audit question: "${question}" with PECO components: ${JSON.stringify(peco)}.`;
   const schema = {
     type: Type.OBJECT,
     properties: {
@@ -154,18 +146,11 @@ export const callQuestionQualityAPI = async (question, peco, statusContainer) =>
     },
     required: ["strengths", "missing_components", "ambiguities"]
   };
-  return await callGeminiAPI(prompt, schema, statusContainer);
+  return await callGeminiAPI(prompt, schema);
 };
 
 export const callPecoSynthesizerAPI = async (peco) => {
-  const prompt = `Synthesise one formal scientific research question using strictly: ${JSON.stringify(peco)}.
-  RULES: 
-  - Convert '&' into the word "and".
-  - Convert ';' into the word "or".
-  - Ensure the distinction between measurement matrices and agents is preserved (e.g., "...measured via umbilical cord blood or maternal blood...").
-  - Use formal EBTC publication style with UK English spelling.
-  Example: "Exposure: Lead (measured in: cord blood ; maternal blood)" should become "...exposure to lead, measured via maternal blood or umbilical cord blood..."`;
-  
+  const prompt = `Synthesise a formal research question from: ${JSON.stringify(peco)}. Keep {matrix:...} tags.`;
   const schema = {
     type: Type.OBJECT,
     properties: { semantic_statement: { type: Type.STRING } },

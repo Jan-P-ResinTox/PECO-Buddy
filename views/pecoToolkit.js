@@ -3,7 +3,8 @@ import { templates } from './templates.js';
 import { ToastService } from '../components/toast.js';
 import { PECO_MAP } from '../config.js';
 import * as GeminiAPI from '../api/gemini.js';
-import { formatPecoForDisplay, showLoading, showError, copyTableToClipboard } from '../utils.js';
+import { showModal } from '../components/modal.js';
+import { formatPecoForDisplay, styleMatrices, showLoading, showError, copyTableToClipboard, escapeHtml } from '../utils.js';
 
 const BASIC_STUDY_TYPES = [
     { id: 'systematic_review', name: 'Systematic Review', icon: 'fa-magnifying-glass-chart' },
@@ -77,6 +78,74 @@ const jumpToStep = (stepId) => {
   }
 };
 
+/**
+ * Shared logic to display the interaction log modal.
+ */
+function showTransparencyLogModal() {
+    const logItems = appState.interactionLog.map((item, idx) => `
+        <div class="p-6 border-b last:border-0 hover:bg-slate-50 transition-colors">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-extrabold text-xs">${idx + 1}</span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${new Date(item.timestamp).toLocaleTimeString('en-GB')}</span>
+                </div>
+                <span class="px-2 py-1 bg-teal-100 text-teal-700 rounded text-[9px] font-extrabold uppercase">Audit Step</span>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Scientific Semantic Context</h5>
+                    <div class="p-4 bg-slate-900 text-slate-300 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed">${escapeHtml(item.prompt)}</div>
+                </div>
+                <div>
+                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Gemini JSON Synthesis</h5>
+                    <div class="p-4 bg-teal-50 text-teal-900 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed border border-teal-100">${escapeHtml(item.response)}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    const content = `
+        <div class="report-modal-content flex-grow overflow-y-auto custom-scrollbar">
+            <div class="p-8 bg-slate-50 border-b">
+                <p class="text-sm text-slate-600 mb-4">This session log captures every semantic negotiation between the PECO-Buddy Co-Pilot and the Gemini Science Robot. It is provided for total methodological transparency.</p>
+                <div class="flex gap-4">
+                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Trace Depth: ${appState.interactionLog.length} Steps</div>
+                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Engine: Gemini-3-Flash</div>
+                </div>
+            </div>
+            <div class="bg-white">
+                ${logItems.length > 0 ? logItems : '<p class="p-12 text-center text-slate-400 italic font-medium">No interactions recorded in the current session. Begin analysis to generate logs.</p>'}
+            </div>
+        </div>
+    `;
+
+    showModal('Extended Transparency Log', content, null, (modal, close) => {
+        const container = modal.querySelector('.modal-container, .report-modal-container');
+        if (!container) return; // Defensive
+        const foot = container.appendChild(document.createElement('div'));
+        foot.className = 'modal-footer p-4 border-t flex justify-end gap-3';
+        foot.innerHTML = `
+            <button class="bg-slate-200 text-slate-700 px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest">Close</button>
+            <button id="download-toolkit-log-btn" class="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Download Trace (.json)</button>
+        `;
+        foot.querySelector('button').onclick = close;
+        const dlBtn = foot.querySelector('#download-toolkit-log-btn');
+        if (dlBtn) {
+            dlBtn.onclick = () => {
+                const blob = new Blob([JSON.stringify(appState.interactionLog, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `peco-toolkit-trace-${new Date().getTime()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                ToastService.show('Semantic trace downloaded.', 'success');
+            };
+        }
+    }, true);
+}
+
 function initIdeationView(container) {
   const generateBtn = container.querySelector('#generate-ideation-btn');
   const scopeInput = container.querySelector('#ideation-scope-input');
@@ -86,7 +155,7 @@ function initIdeationView(container) {
   const toggleBasic = container.querySelector('#toggle-basic-types');
   const toggleExtended = container.querySelector('#toggle-extended-types');
 
-  let activeFilter = 'basic'; // Default filter
+  let activeFilter = 'basic'; 
 
   const renderStudyTypes = () => {
     const list = activeFilter === 'basic' ? BASIC_STUDY_TYPES : EXTENDED_STUDY_TYPES;
@@ -145,15 +214,21 @@ function initIdeationView(container) {
         appState.authorWorkflow.ideationData.selectedStudyType.name,
         resultsContainer
       );
-      appState.authorWorkflow.ideationData.generatedSuggestions = result.questions;
-      renderSuggestions();
-    } catch(e) { showError(resultsContainer, e.message); }
+      if (result && result.questions) {
+          appState.authorWorkflow.ideationData.generatedSuggestions = result.questions;
+          renderSuggestions();
+      } else {
+          throw new Error("Model returned invalid question format.");
+      }
+    } catch(e) { 
+        showError(resultsContainer, e.message); 
+    }
   };
 
   const renderSuggestions = () => {
     resultsContainer.innerHTML = appState.authorWorkflow.ideationData.generatedSuggestions.map((q, i) => `
       <div class="bg-white p-5 rounded-2xl border mb-4 shadow-sm hover:shadow-md transition-shadow">
-        <p class="font-bold text-slate-800">"${q.full_statement}"</p>
+        <p class="font-bold text-slate-800">"${styleMatrices(escapeHtml(q.full_statement))}"</p>
         <div class="text-right mt-4">
           <button class="select-q-btn bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider" data-index="${i}">Develop this Question</button>
         </div>
@@ -163,7 +238,6 @@ function initIdeationView(container) {
       btn.onclick = () => {
         const q = appState.authorWorkflow.ideationData.generatedSuggestions[btn.dataset.index];
         appState.authorWorkflow.clarityData.researchQuestion = q.full_statement;
-        // Reset PECO state to prevent lingering elements from previous attempts
         appState.authorWorkflow.liveCoAuthorData.peco = { 
           population: q.population || '', 
           exposure: q.exposure || '', 
@@ -183,10 +257,10 @@ function initIdeationView(container) {
 function initClarityView(container, autoRun = false) {
   const dashboardContainer = container.querySelector('#clarity-dashboard-container');
   const footerContainer = container.querySelector('#clarity-footer-container');
-  const input = container.querySelector('#research-question-input');
+  const questionDisplay = container.querySelector('#research-question-display');
   const scoreBtn = container.querySelector('#score-clarity-btn');
 
-  if (!dashboardContainer || !footerContainer || !input || !scoreBtn) return;
+  if (!dashboardContainer || !footerContainer || !questionDisplay || !scoreBtn) return;
 
   const runAnalysis = async (providedPeco = null) => {
     showLoading(dashboardContainer, 'Analysing Research Design...');
@@ -199,10 +273,8 @@ function initClarityView(container, autoRun = false) {
 
       if (appState.analysisEngine === 'ai') {
           if (providedPeco) {
-            // Use provided manual state directly
             peco = { ...providedPeco };
           } else {
-            // Re-extract fresh from question string
             const prelim = await GeminiAPI.callDomainIdentifierAPI(q);
             peco = await GeminiAPI.callSpecialistPecoExtractorAPI(prelim.domain, prelim, q, appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General');
           }
@@ -220,7 +292,6 @@ function initClarityView(container, autoRun = false) {
           Object.keys(peco).forEach(k => { if(!peco[k]) analysis.missing_components.push(k); });
       }
 
-      // Synchronise state
       appState.authorWorkflow.liveCoAuthorData.peco = peco;
       appState.authorWorkflow.clarityData.analysis = analysis;
       
@@ -243,7 +314,8 @@ function initClarityView(container, autoRun = false) {
     const offset = 314 * (1 - qualityScore/100);
     const color = qualityScore > 75 ? '#0d9488' : qualityScore > 50 ? '#f59e0b' : '#ef4444';
 
-    input.value = researchQuestion;
+    // RENDER rich-text statement into the display div
+    questionDisplay.innerHTML = `"${styleMatrices(escapeHtml(researchQuestion))}"`;
 
     dashboardContainer.innerHTML = `
       <div class="bg-white p-10 rounded-[2rem] border shadow-sm">
@@ -384,9 +456,10 @@ function initPecoWorkshopView(container) {
   const qDisplay = container.querySelector('#final-question-display');
   const pecoDisplay = container.querySelector('#final-peco-display');
   const saveBtn = container.querySelector('#save-to-notebook-btn');
+  const logBtn = container.querySelector('#show-transparency-log-workshop-btn');
   const reportBtn = container.querySelector('#view-transparency-report-btn');
 
-  if (qDisplay) qDisplay.textContent = q ? `"${q}"` : 'No finalised question found yet.';
+  if (qDisplay) qDisplay.innerHTML = q ? `"${styleMatrices(escapeHtml(q))}"` : 'No finalised question found yet.';
   if (pecoDisplay) {
       pecoDisplay.innerHTML = `
         <table id="peco-final-table" class="w-full text-sm border-collapse rounded-2xl overflow-hidden border border-slate-200">
@@ -414,6 +487,10 @@ function initPecoWorkshopView(container) {
       };
   }
 
+  if (logBtn) {
+      logBtn.onclick = () => showTransparencyLogModal();
+  }
+
   if (reportBtn) {
       reportBtn.onclick = () => renderTransparencyReport();
   }
@@ -428,7 +505,7 @@ function renderTransparencyReport() {
     const timestamp = new Date().toLocaleString('en-GB');
     
     document.getElementById('report-timestamp').textContent = timestamp;
-    document.getElementById('report-final-question').textContent = `"${q}"`;
+    document.getElementById('report-final-question').innerHTML = `"${styleMatrices(escapeHtml(q))}"`;
     
     const tableWrapper = document.getElementById('report-peco-table-wrapper');
     tableWrapper.innerHTML = `
@@ -442,16 +519,21 @@ function renderTransparencyReport() {
         </table>
     `;
 
-    const logContainer = document.getElementById('report-log-entries');
+    const logSummaryContainer = document.getElementById('report-log-entries');
     if (appState.authorWorkflow.clarityData.analysis) {
-        logContainer.innerHTML = `
+        logSummaryContainer.innerHTML = `
             <div class="text-[10px] p-2 bg-white border rounded-xl">
-                <span class="font-bold text-teal-600 mr-2">ANALYSIS:</span> Found ${appState.authorWorkflow.clarityData.analysis.missing_components.length} missing parts and ${appState.authorWorkflow.clarityData.analysis.ambiguities.length} ambiguities.
+                <span class="font-bold text-teal-600 mr-2">LOGIC AUDIT:</span> Found ${appState.authorWorkflow.clarityData.analysis.missing_components.length} omissions and ${appState.authorWorkflow.clarityData.analysis.ambiguities.length} conceptual ambiguities.
             </div>
             <div class="text-[10px] p-2 bg-white border rounded-xl">
-                <span class="font-bold text-teal-600 mr-2">CO-PILOT:</span> Refined PECO components synchronously based on user updates.
+                <span class="font-bold text-teal-600 mr-2">SEMANTIC SYNC:</span> Synchronised ${appState.interactionLog.length} interaction blocks for scientific reproducibility.
             </div>
         `;
+    }
+
+    const reportLogBtn = document.getElementById('report-show-log-btn');
+    if (reportLogBtn) {
+        reportLogBtn.onclick = () => showTransparencyLogModal();
     }
 
     document.getElementById('report-copy-table-btn').onclick = () => copyTableToClipboard('#report-peco-table');

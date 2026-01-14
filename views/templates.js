@@ -304,7 +304,8 @@ export const templates = {
                     <label class="block text-xs font-extrabold text-slate-400 uppercase tracking-widest">Finalised Scientific Statement (Read Only)</label>
                     <div id="clarity-status-tag"></div>
                 </div>
-                <textarea id="research-question-input" readonly class="w-full text-xl font-bold p-6 mb-6 resize-none rounded-2xl border-slate-200 bg-slate-50/50 italic cursor-not-allowed opacity-80" rows="4" placeholder="AI Synthesised research question..."></textarea>
+                <!-- Replaced textarea with a display-ready div for badge rendering -->
+                <div id="research-question-display" class="w-full text-xl font-bold p-8 mb-6 rounded-2xl border border-slate-100 bg-slate-50/50 italic leading-relaxed shadow-inner min-h-[120px] select-all cursor-text" aria-readonly="true"></div>
                 <button id="score-clarity-btn" class="w-full bg-teal-600 text-white py-5 rounded-2xl font-extrabold uppercase text-sm tracking-widest shadow-lg hover:bg-teal-700 transition-all flex items-center justify-center gap-3">
                     <i class="fa-solid fa-arrows-rotate"></i> UPDATE QUESTION & DASHBOARD
                 </button>
@@ -318,9 +319,10 @@ export const templates = {
             <h3 class="text-2xl font-extrabold text-slate-800 mb-8">Final Protocol Design</h3>
             <div id="final-question-display" class="p-6 bg-slate-50 rounded-2xl text-lg font-bold text-slate-700 mb-8 italic border border-slate-100"></div>
             <div id="final-peco-display" class="mb-10"></div>
-            <div class="flex justify-between gap-4">
-                <button id="save-to-notebook-btn" class="flex-1 bg-teal-600 text-white py-4 rounded-xl font-extrabold uppercase text-xs">Save to Notebook</button>
-                <button id="view-transparency-report-btn" class="flex-1 bg-indigo-600 text-white py-4 rounded-xl font-extrabold uppercase text-xs shadow-lg">View Transparency Report</button>
+            <div class="flex flex-wrap justify-between gap-4">
+                <button id="save-to-notebook-btn" class="flex-grow bg-teal-600 text-white py-4 px-6 rounded-xl font-extrabold uppercase text-xs">Save to Notebook</button>
+                <button id="show-transparency-log-workshop-btn" class="flex-grow bg-white border border-slate-200 text-slate-600 py-4 px-6 rounded-xl font-extrabold uppercase text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-code"></i> Extended Transparency</button>
+                <button id="view-transparency-report-btn" class="flex-grow bg-indigo-600 text-white py-4 px-6 rounded-xl font-extrabold uppercase text-xs shadow-lg">View Transparency Report</button>
             </div>
         </div>
     `,
@@ -335,6 +337,7 @@ export const templates = {
                         <p class="text-slate-500 font-medium">Generated on <span id="report-timestamp"></span></p>
                     </div>
                     <div class="flex gap-3">
+                         <button id="report-show-log-btn" class="bg-white border border-slate-200 text-slate-600 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"><i class="fa-solid fa-code"></i> Transparency Log</button>
                          <button id="report-copy-table-btn" class="bg-slate-100 text-slate-700 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-all"><i class="fa-solid fa-copy mr-2"></i>Copy Table</button>
                          <button id="report-export-nanopub-btn" class="bg-teal-600 text-white px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg hover:shadow-xl transition-all"><i class="fa-solid fa-file-code mr-2"></i>Export Nano-pub</button>
                     </div>
@@ -355,10 +358,10 @@ export const templates = {
 
                     <section class="p-8 bg-slate-50 rounded-3xl border border-slate-100">
                         <h4 class="text-[10px] font-extrabold uppercase tracking-widest text-indigo-600 mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-clock-rotate-left"></i> Interaction Log (Reproducibility)
+                            <i class="fa-solid fa-clock-rotate-left"></i> Interaction Log Summary
                         </h4>
                         <div id="report-interaction-log" class="space-y-4 max-h-60 overflow-y-auto pr-4 custom-scrollbar">
-                             <p class="text-xs text-slate-500 italic">Reproducibility trace generated from semantic analysis session.</p>
+                             <p class="text-xs text-slate-500 italic">Semantic analysis trail session data available via the Transparency Log button.</p>
                              <div id="report-log-entries" class="space-y-2"></div>
                         </div>
                     </section>
