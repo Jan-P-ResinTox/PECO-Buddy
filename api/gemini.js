@@ -15,7 +15,7 @@ const getAI = () => {
 export const callGeminiAPI = async (prompt, schema, statusContainer = null, config = {}) => {
   const modelName = 'gemini-3-flash-preview';
 
-  const systemInstruction = `You are an expert scientific co-author for the EBTC.
+  const systemInstruction = `You are a high-level Linguistic Professor and Domain Expert in Toxicology and Epidemiology, serving as a scientific co-author for the EBTC.
   
   PECO RULES:
   - Identify Population, Exposure, Comparison, and Outcome.
@@ -25,7 +25,7 @@ export const callGeminiAPI = async (prompt, schema, statusContainer = null, conf
   
   OUTPUT:
   - Return ONLY valid JSON matching the schema.
-  - Use UK English spelling.`;
+  - Use UK English spelling (e.g., 'fetal', 'haemoglobin').`;
 
   try {
     const ai = getAI();
@@ -62,6 +62,39 @@ export const callGeminiAPI = async (prompt, schema, statusContainer = null, conf
   }
 };
 
+/**
+ * ENHANCED: Context Logic Engine
+ * Performs high-level semantic deconstruction and terminology anchoring.
+ */
+export const callContextLogicEngineAPI = async (question) => {
+  const prompt = `Perform a high-level scientific logic deconstruction of this research question: "${question}".
+  
+  Identify:
+  1. The "Unit of Observation": The specific entity whose biology/status is measured for the outcome.
+  2. The "Exposure Vehicle": The route/entity through which the exposure happens (e.g., mother in prenatal studies).
+  3. "Species Context": Identify species (Human, Rat, Mouse, etc.).
+  4. "Term Anchors": Define the preferred, contextually appropriate term for the Unit of Observation. 
+     - If Human & Offspring -> Use 'Children' or 'Infants'.
+     - If Rodent & Offspring -> Use 'Pups'.
+     - If Human & Pregnancy -> Use 'Pregnant Women'.
+  
+  Return JSON with "unit_of_observation", "exposure_vehicle", "species_context", "preferred_population_term", "causal_logic".`;
+
+  const schema = {
+    type: Type.OBJECT,
+    properties: {
+      unit_of_observation: { type: Type.STRING },
+      exposure_vehicle: { type: Type.STRING },
+      species_context: { type: Type.STRING },
+      preferred_population_term: { type: Type.STRING },
+      causal_logic: { type: Type.STRING }
+    },
+    required: ["unit_of_observation", "exposure_vehicle", "species_context", "preferred_population_term", "causal_logic"]
+  };
+
+  return await callGeminiAPI(prompt, schema);
+};
+
 export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer) => {
   const prompt = `Generate 3 research questions for a ${studyType} based on: "${scope}". 
   Tag measurement sites as {matrix:...}. 
@@ -91,8 +124,11 @@ export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer)
   return await callGeminiAPI(prompt, schema, statusContainer);
 };
 
-export const callDomainIdentifierAPI = async (text) => {
-  const prompt = `Identify scientific domain and PECO concepts for: "${text}". Tag matrices as {matrix:...}.`;
+export const callDomainIdentifierAPI = async (text, contextLogic = null) => {
+  const prompt = `Identify scientific domain and PECO concepts for: "${text}". 
+  ${contextLogic ? `CRITICAL LOGIC FRAME: The study concerns ${contextLogic.species_context}. The unit of observation is ${contextLogic.unit_of_observation}. The exposure is mediated via ${contextLogic.exposure_vehicle}.` : ''}
+  Tag matrices as {matrix:...}.`;
+  
   const schema = {
     type: Type.OBJECT,
     properties: {
@@ -107,8 +143,17 @@ export const callDomainIdentifierAPI = async (text) => {
   return await callGeminiAPI(prompt, schema);
 };
 
-export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, studyType) => {
-  const prompt = `Extract PECO for ${studyType} in ${domain}. Text: "${fullText}". Tag matrices as {matrix:...}.`;
+export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, studyType, contextLogic = null) => {
+  const prompt = `Extract precise PECO for ${studyType} in ${domain}. 
+  Text: "${fullText}". 
+  ${contextLogic ? `
+  MANDATORY CONSTRAINTS from Context Logic Engine:
+  - SPECIES: ${contextLogic.species_context}
+  - POPULATION TERM: You MUST use the term "${contextLogic.preferred_population_term}" for the Population field.
+  - UNIT OF OBSERVATION: Only include the "${contextLogic.unit_of_observation}" in the population, NOT the exposure vehicle (${contextLogic.exposure_vehicle}).
+  ` : ''}
+  Tag matrices as {matrix:...}.`;
+  
   const schema = {
     type: Type.OBJECT,
     properties: {

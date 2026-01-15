@@ -94,7 +94,7 @@ function showTransparencyLogModal() {
             
             <div class="space-y-4">
                 <div>
-                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Scientific Scientific Context</h5>
+                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Scientific Prompt</h5>
                     <div class="p-4 bg-slate-900 text-slate-300 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed">${escapeHtml(item.prompt)}</div>
                 </div>
                 <div>
@@ -263,7 +263,7 @@ function initClarityView(container, autoRun = false) {
   if (!dashboardContainer || !footerContainer || !questionDisplay || !scoreBtn) return;
 
   const runAnalysis = async (providedPeco = null) => {
-    showLoading(dashboardContainer, 'Analysing Research Design...');
+    showLoading(dashboardContainer, 'Calibrating Context Logic & Terminology...');
     scoreBtn.disabled = true;
     scoreBtn.innerHTML = '<div class="loader inline-block"></div> UPDATING...';
 
@@ -272,12 +272,29 @@ function initClarityView(container, autoRun = false) {
       let peco, analysis;
 
       if (appState.analysisEngine === 'ai') {
+          // STEP 1: Calibrate Context & Species Mapping
+          const contextLogic = await GeminiAPI.callContextLogicEngineAPI(q);
+          
           if (providedPeco) {
             peco = { ...providedPeco };
           } else {
-            const prelim = await GeminiAPI.callDomainIdentifierAPI(q);
-            peco = await GeminiAPI.callSpecialistPecoExtractorAPI(prelim.domain, prelim, q, appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General');
+            // STEP 2: Identify Domain (with context)
+            showLoading(dashboardContainer, 'Identifying Scientific Domain...');
+            const prelim = await GeminiAPI.callDomainIdentifierAPI(q, contextLogic);
+            
+            // STEP 3: Specialist Extraction (constrained by context and terminology anchors)
+            showLoading(dashboardContainer, `Extracting PECO (Anchored to ${contextLogic.preferred_population_term})...`);
+            peco = await GeminiAPI.callSpecialistPecoExtractorAPI(
+                prelim.domain, 
+                prelim, 
+                q, 
+                appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General',
+                contextLogic
+            );
           }
+          
+          // STEP 4: Quality Audit
+          showLoading(dashboardContainer, 'Auditing Question Quality...');
           analysis = await GeminiAPI.callQuestionQualityAPI(q, peco);
       } else {
           peco = providedPeco ? { ...providedPeco } : { population: '', exposure: '', comparison: '', outcome: '' };
