@@ -12,6 +12,11 @@ const getAI = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+/**
+ * Core API Wrapper with Deterministic Anchoring
+ * seed: 42 - The global scientific constant for this application.
+ * temperature: 0.1 - Low variance for high-precision extraction.
+ */
 export const callGeminiAPI = async (prompt, schema, statusContainer = null, config = {}) => {
   const modelName = 'gemini-3-flash-preview';
 
@@ -37,6 +42,7 @@ export const callGeminiAPI = async (prompt, schema, statusContainer = null, conf
         responseMimeType: schema ? "application/json" : "text/plain",
         responseSchema: schema || undefined,
         temperature: 0.1,
+        seed: 42,
         ...config
       }
     });
@@ -72,11 +78,12 @@ export const callContextLogicEngineAPI = async (question) => {
   Identify:
   1. The "Unit of Observation": The specific entity whose biology/status is measured for the outcome.
   2. The "Exposure Vehicle": The route/entity through which the exposure happens (e.g., mother in prenatal studies).
-  3. "Species Context": Identify species (Human, Rat, Mouse, etc.).
-  4. "Term Anchors": Define the preferred, contextually appropriate term for the Unit of Observation. 
-     - If Human & Offspring -> Use 'Children' or 'Infants'.
-     - If Rodent & Offspring -> Use 'Pups'.
-     - If Human & Pregnancy -> Use 'Pregnant Women'.
+  3. "Species Context": Identify species (Human, Rat, Mouse, Zebrafish, etc.).
+  4. "Term Anchors": Define the preferred, contextually appropriate term for the Unit of Observation based on Species and Life Stage.
+     - Human + Prenatal/Birth -> Use 'Infants' or 'Children'.
+     - Rodent + Prenatal/Birth -> Use 'Pups'.
+     - Human + Pregnancy -> Use 'Pregnant Women'.
+     - Zebrafish + Early Stage -> Use 'Larvae' or 'Embryos'.
   
   Return JSON with "unit_of_observation", "exposure_vehicle", "species_context", "preferred_population_term", "causal_logic".`;
 
@@ -96,7 +103,7 @@ export const callContextLogicEngineAPI = async (question) => {
 };
 
 export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer) => {
-  const prompt = `Generate 3 research questions for a ${studyType} based on: "${scope}". 
+  const prompt = `Generate 3 distinct research questions for a ${studyType} based on: "${scope}". 
   Tag measurement sites as {matrix:...}. 
   Return JSON with "questions" array containing full_statement, population, exposure, comparison, outcome.`;
 
