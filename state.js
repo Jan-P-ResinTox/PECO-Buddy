@@ -6,7 +6,13 @@ export const appState = {
     authorWorkflow: {
         currentStep: 'step-ideation',
         completedSteps: [],
-        ideationData: { scopeText: '', selectedStudyType: null, generatedSuggestions: [], selectedSuggestion: null },
+        ideationData: { 
+            scopeText: '', 
+            selectedStudyType: null, 
+            generatedSuggestions: [], 
+            selectedSuggestion: null,
+            generationCount: 0 // Track for deterministic seed +1 logic
+        },
         clarityData: { researchQuestion: '', qualityScore: 0, analysis: null, peco: null, strengths: [], appliedSuggestions: {}, isAnalysisCollapsed: false },
         liveCoAuthorData: { peco: { population: '', exposure: '', comparison: '', outcome: '' }, ambiguities: [] },
         pecoWorkshopData: null,

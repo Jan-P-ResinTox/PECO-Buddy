@@ -102,7 +102,7 @@ export const callContextLogicEngineAPI = async (question) => {
   return await callGeminiAPI(prompt, schema);
 };
 
-export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer) => {
+export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer, config = {}) => {
   const prompt = `Generate 3 distinct research questions for a ${studyType} based on: "${scope}". 
   Tag measurement sites as {matrix:...}. 
   Return JSON with "questions" array containing full_statement, population, exposure, comparison, outcome.`;
@@ -128,7 +128,7 @@ export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer)
     required: ["questions"]
   };
 
-  return await callGeminiAPI(prompt, schema, statusContainer);
+  return await callGeminiAPI(prompt, schema, statusContainer, config);
 };
 
 export const callDomainIdentifierAPI = async (text, contextLogic = null) => {
@@ -165,7 +165,7 @@ export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, s
     type: Type.OBJECT,
     properties: {
       population: { type: Type.STRING },
-      exposure: { type: Type.STRING },
+      exposure: { type: Type.STRING }, 
       comparison: { type: Type.STRING },
       outcome: { type: Type.STRING }
     },

@@ -201,6 +201,10 @@ function initIdeationView(container) {
     const btn = e.target.closest('button');
     if (!btn) return;
     appState.authorWorkflow.ideationData.selectedStudyType = { id: btn.dataset.id, name: btn.dataset.name };
+    
+    // RESET generationCount as requested when a new study type is clicked
+    appState.authorWorkflow.ideationData.generationCount = 0;
+    
     studyTypeSelector.querySelectorAll('button').forEach(b => b.classList.remove('bg-teal-50', 'border-teal-500'));
     btn.classList.add('bg-teal-50', 'border-teal-500');
     updateUI();
@@ -209,13 +213,22 @@ function initIdeationView(container) {
   generateBtn.onclick = async () => {
     showLoading(resultsContainer, 'Consulting Scientific Co-Author...');
     try {
+      // IMPLEMENT progressive seed logic: Base 42 + increment count per session/study-type
+      const currentSeed = 42 + (appState.authorWorkflow.ideationData.generationCount || 0);
+      
       const result = await GeminiAPI.callAdvancedIdeationAPI(
         appState.authorWorkflow.ideationData.scopeText,
         appState.authorWorkflow.ideationData.selectedStudyType.name,
-        resultsContainer
+        resultsContainer,
+        { seed: currentSeed }
       );
+      
       if (result && result.questions) {
           appState.authorWorkflow.ideationData.generatedSuggestions = result.questions;
+          
+          // INCREMENT count for next potential click to provide variations while remaining deterministic
+          appState.authorWorkflow.ideationData.generationCount = (appState.authorWorkflow.ideationData.generationCount || 0) + 1;
+          
           renderSuggestions();
       } else {
           throw new Error("Model returned invalid question format.");
