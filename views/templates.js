@@ -1,3 +1,4 @@
+
 export const templates = {
     copyrightView: `
         <div class="space-y-6">
@@ -38,7 +39,7 @@ export const templates = {
                 <div class="text-xs text-rose-900 leading-relaxed space-y-2 font-medium">
                     <p>Without permission granted from the author of the software, the following actions are expressly forbidden:</p>
                     <ul class="list-disc ml-4 space-y-1">
-                        <li>You may NOT, outside the EBTC-Workgroups - or as an invited party - disclose, take screenshots, hand out website address, translate, or in any digital or analog media or form, record any of the core processes or functions that you may gain knowledge of.</li>
+                        <li>You may NOT, outside the EBTC-Workgroups - or as an invited party - disclose, take screenshots, hand out website address, translate, or in any digital or analogue media or form, record any of the core processes or functions that you may gain knowledge of.</li>
                         <li>You may NOT distribute, modify, adapt, translate, or create derivative works based on the Software's source code.</li>
                         <li>You may NOT decompile, reverse engineer, disassemble, or otherwise attempt to derive the source code for the Software.</li>
                         <li>You may NOT merge or incorporate the Software or its source code into any other software.</li>
@@ -53,15 +54,15 @@ export const templates = {
     `,
     versionRationaleView: `
         <div class="prose prose-sm max-w-none">
-            <h2 class="text-slate-900 font-extrabold tracking-tight">PECO-Buddy v8.0: Scientific Evolution</h2>
-            <p class="text-slate-600 italic">This rationale details the paradigm shift from Version 7.x to 8.0, moving from descriptive assistance to synthetic reasoning.</p>
+            <h2 class="text-slate-900 font-extrabold tracking-tight">PECO-Buddy v8.1.1: Scientific Evolution</h2>
+            <p class="text-slate-600 italic">This rationale details the paradigm shift from Version 7.x to 8.1.1, moving from descriptive assistance to synthetic reasoning.</p>
             
             <div class="space-y-6 mt-6">
                 <section>
                     <h4 class="flex items-center gap-2 text-teal-700 font-bold uppercase text-xs tracking-widest">
                         <i class="fa-solid fa-microchip"></i> 1. Generative Synthetic Logic
                     </h4>
-                    <p class="text-slate-700 text-xs">v8.0 introduces the <strong>Semantic Co-Pilot</strong>. Unlike previous versions that acted as simple repositories, 8.0 uses high-dimensional LLM embeddings to verify if a research question is logically complete based on PECO components. It audits your scientific reasoning in real-time.</p>
+                    <p class="text-slate-700 text-xs">v8.1 introduces the <strong>Semantic Co-Pilot</strong>. Unlike previous versions that acted as simple repositories, 8.1 uses high-dimensional LLM embeddings to verify if a research question is logically complete based on PECO components. It audits your scientific reasoning in real-time.</p>
                 </section>
 
                 <section>
@@ -75,7 +76,7 @@ export const templates = {
                     <h4 class="flex items-center gap-2 text-teal-700 font-bold uppercase text-xs tracking-widest">
                         <i class="fa-solid fa-vial"></i> 3. Comprehensive Methodological Reach
                     </h4>
-                    <p class="text-slate-700 text-xs">v8.0 provides native support for <strong>In Vivo, In Vitro, and In Silico</strong> study types, removing the clinical-only bias of earlier versions. It includes specialized extraction rules for cell culture phenotypes and computational parameters.</p>
+                    <p class="text-slate-700 text-xs">v8.1 provides native support for <strong>In Vivo, In Vitro, and In Silico</strong> study types, removing the clinical-only bias of earlier versions. It includes specialised extraction rules for cell culture phenotypes and computational parameters.</p>
                 </section>
 
                 <section>
@@ -198,7 +199,7 @@ export const templates = {
                         </div>
                         <div>
                             <div class="font-extrabold text-slate-800 text-sm uppercase tracking-wide">Generative AI</div>
-                            <div class="text-[10px] text-slate-500 mt-1 leading-relaxed">Advanced semantic understanding using Gemini-3-Flash. Recognizes context, synonyms, and complex logic.</div>
+                            <div class="text-[10px] text-slate-500 mt-1 leading-relaxed">Advanced semantic understanding using Gemini-3-Flash. Recognises context, synonyms, and complex logic.</div>
                         </div>
                     </button>
                     <button id="modal-engine-nlp-btn" class="p-5 rounded-3xl border-2 border-slate-100 text-left hover:border-teal-500 transition-all flex flex-col gap-3 group">
@@ -228,7 +229,40 @@ export const templates = {
                 </div>
             </div>
             
-            <div class="space-y-4">
+            <div class="space-y-4 pt-6 border-t border-slate-100">
+                <h3 class="font-bold text-slate-800 mb-2">Randomness Control</h3>
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Seed</label>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex items-center gap-4">
+                             <input id="settings-seed-range" type="range" min="1" max="1000" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-600">
+                             <input id="settings-seed-input" type="number" class="w-20 p-3 rounded-xl text-xs font-mono font-bold border-slate-200 focus:border-teal-500 outline-none bg-white" placeholder="42">
+                        </div>
+                        <p class="text-[10px] text-slate-500">Deterministic constant for AI reproducibility.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4 pt-6 border-t border-slate-100">
+                <h3 class="font-bold text-slate-800 mb-2">Domain Adaptation (Pro)</h3>
+                <p class="text-[10px] text-slate-500 mb-4">Customize the AI persona and logic rules for specific scientific niches.</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">AI Domain Context</label>
+                        <input id="settings-domain-context" type="text" class="w-full p-3 rounded-xl text-xs font-bold border-slate-200 focus:border-teal-500 outline-none" placeholder="e.g., Toxicology, Material Science...">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Logic Anchors & Heuristics</label>
+                        <textarea id="settings-logic-anchors" rows="6" class="w-full p-3 rounded-xl text-xs font-mono border-slate-200 focus:border-teal-500 outline-none leading-relaxed custom-scrollbar resize-none" placeholder="Define specific if/then rules..."></textarea>
+                    </div>
+                    <div class="text-right">
+                        <button id="settings-reset-heuristics" class="text-[10px] font-bold text-slate-400 hover:text-teal-600 underline">Reset to Defaults</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-4 pt-6 border-t border-slate-100">
                 <h3 class="font-bold text-slate-800 mb-2">API Configuration</h3>
                 <div class="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col gap-4">
                     <div class="flex items-center justify-between gap-4">
@@ -266,7 +300,7 @@ export const templates = {
     ideationView: `
         <div class="max-w-5xl mx-auto">
             <div class="text-center mb-12">
-                <h2 class="text-4xl font-extrabold text-slate-800 mb-4 tracking-tight">Ideation & Scoping</h2>
+                <h2 class="text-4xl font-extrabold text-slate-800 mb-4 tracking-tight">Ideation</h2>
                 <p class="text-lg text-slate-500">Provide a research concept to generate structured protocol drafts.</p>
             </div>
             
@@ -287,9 +321,14 @@ export const templates = {
                     <div id="study-type-selector" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
                 </div>
 
-                <button id="generate-ideation-btn" class="w-full py-5 bg-teal-600 hover:bg-teal-700 text-white font-extrabold rounded-2xl text-sm uppercase tracking-widest shadow-xl hover:shadow-2xl transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                    Complete Steps 1 & 2 to Continue
-                </button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button id="generate-ideation-btn" class="py-5 bg-teal-600 hover:bg-teal-700 text-white font-extrabold rounded-2xl text-sm uppercase tracking-widest shadow-xl hover:shadow-2xl transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                        Generate Suggestions
+                    </button>
+                    <button id="use-own-question-btn" class="py-5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl text-sm uppercase tracking-widest shadow-xl hover:shadow-2xl transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                        Continue with my own question
+                    </button>
+                </div>
             </div>
 
             <div id="ideation-results-container" class="mt-12"></div>
@@ -301,10 +340,11 @@ export const templates = {
             
             <div id="clarity-statement-section" class="bg-white p-10 rounded-[2rem] border shadow-sm">
                 <div class="flex justify-between items-center mb-6">
-                    <label class="block text-xs font-extrabold text-slate-400 uppercase tracking-widest">Finalized Scientific Statement (Read Only)</label>
+                    <label class="block text-xs font-extrabold text-slate-400 uppercase tracking-widest">Finalised Scientific Statement (Read Only)</label>
                     <div id="clarity-status-tag"></div>
                 </div>
-                <textarea id="research-question-input" readonly class="w-full text-xl font-bold p-6 mb-6 resize-none rounded-2xl border-slate-200 bg-slate-50/50 italic cursor-not-allowed opacity-80" rows="4" placeholder="AI Synthesized research question..."></textarea>
+                <!-- Replaced textarea with a display-ready div for badge rendering -->
+                <div id="research-question-display" class="w-full text-xl font-bold p-8 mb-6 rounded-2xl border border-slate-100 bg-slate-50/50 italic leading-relaxed shadow-inner min-h-[120px] select-all cursor-text" aria-readonly="true"></div>
                 <button id="score-clarity-btn" class="w-full bg-teal-600 text-white py-5 rounded-2xl font-extrabold uppercase text-sm tracking-widest shadow-lg hover:bg-teal-700 transition-all flex items-center justify-center gap-3">
                     <i class="fa-solid fa-arrows-rotate"></i> UPDATE QUESTION & DASHBOARD
                 </button>
@@ -318,9 +358,10 @@ export const templates = {
             <h3 class="text-2xl font-extrabold text-slate-800 mb-8">Final Protocol Design</h3>
             <div id="final-question-display" class="p-6 bg-slate-50 rounded-2xl text-lg font-bold text-slate-700 mb-8 italic border border-slate-100"></div>
             <div id="final-peco-display" class="mb-10"></div>
-            <div class="flex justify-between gap-4">
-                <button id="save-to-notebook-btn" class="flex-1 bg-teal-600 text-white py-4 rounded-xl font-extrabold uppercase text-xs">Save to Notebook</button>
-                <button id="view-transparency-report-btn" class="flex-1 bg-indigo-600 text-white py-4 rounded-xl font-extrabold uppercase text-xs shadow-lg">View Transparency Report</button>
+            <div class="flex flex-wrap justify-between gap-4">
+                <button id="save-to-notebook-btn" class="flex-grow bg-teal-600 text-white py-4 px-6 rounded-xl font-extrabold uppercase text-xs">Save to Notebook</button>
+                <button id="show-transparency-log-workshop-btn" class="flex-grow bg-white border border-slate-200 text-slate-600 py-4 px-6 rounded-xl font-extrabold uppercase text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-code"></i> Extended Transparency</button>
+                <button id="view-transparency-report-btn" class="flex-grow bg-indigo-600 text-white py-4 px-6 rounded-xl font-extrabold uppercase text-xs shadow-lg">View Transparency Report</button>
             </div>
         </div>
     `,
@@ -335,6 +376,7 @@ export const templates = {
                         <p class="text-slate-500 font-medium">Generated on <span id="report-timestamp"></span></p>
                     </div>
                     <div class="flex gap-3">
+                         <button id="report-show-log-btn" class="bg-white border border-slate-200 text-slate-600 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"><i class="fa-solid fa-code"></i> Transparency Log</button>
                          <button id="report-copy-table-btn" class="bg-slate-100 text-slate-700 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-all"><i class="fa-solid fa-copy mr-2"></i>Copy Table</button>
                          <button id="report-export-nanopub-btn" class="bg-teal-600 text-white px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg hover:shadow-xl transition-all"><i class="fa-solid fa-file-code mr-2"></i>Export Nano-pub</button>
                     </div>
@@ -343,7 +385,7 @@ export const templates = {
                 <div class="space-y-10">
                     <section>
                         <h4 class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-clipboard-check"></i> Finalized Protocol
+                            <i class="fa-solid fa-clipboard-check"></i> Finalised Protocol
                         </h4>
                         <div id="report-final-question" class="text-2xl font-bold text-slate-800 italic leading-relaxed"></div>
                     </section>
@@ -355,18 +397,18 @@ export const templates = {
 
                     <section class="p-8 bg-slate-50 rounded-3xl border border-slate-100">
                         <h4 class="text-[10px] font-extrabold uppercase tracking-widest text-indigo-600 mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-clock-rotate-left"></i> Interaction Log (Reproducibility)
+                            <i class="fa-solid fa-clock-rotate-left"></i> Interaction Log Summary
                         </h4>
                         <div id="report-interaction-log" class="space-y-4 max-h-60 overflow-y-auto pr-4 custom-scrollbar">
-                             <p class="text-xs text-slate-500 italic">Reproducibility trace generated from semantic analysis session.</p>
+                             <p class="text-xs text-slate-500 italic">Semantic analysis trail session data available via the Transparency Log button.</p>
                              <div id="report-log-entries" class="space-y-2"></div>
                         </div>
                     </section>
                 </div>
                 
                 <div class="mt-12 pt-8 border-t flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    <span>EBTC-Workgroups Authorised Tool</span>
-                    <span>v8.0 Beta Final</span>
+                    <span>This Tool is Authorised for EBTC-Workgroup use</span>
+                    <span>v8.1.1 Beta Final</span>
                 </div>
             </div>
         </div>
@@ -383,14 +425,14 @@ export const templates = {
             <div id="step-clarity" class="workflow-step">
                 <div class="step-header">
                     <div class="step-number">2</div>
-                    <span class="text-xs font-extrabold uppercase tracking-widest">Analysis</span>
+                    <span class="text-xs font-extrabold uppercase tracking-widest">Analysis & Refinement</span>
                 </div>
                 <div class="step-content"></div>
             </div>
             <div id="step-peco-workshop" class="workflow-step">
                 <div class="step-header">
                     <div class="step-number">3</div>
-                    <span class="text-xs font-extrabold uppercase tracking-widest">Finalization</span>
+                    <span class="text-xs font-extrabold uppercase tracking-widest">Validation</span>
                 </div>
                 <div class="step-content"></div>
             </div>

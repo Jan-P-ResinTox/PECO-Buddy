@@ -1,66 +1,117 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
+import { appState } from '../state.js';
 import { extractJsonFromString, showError } from '../utils.js';
 
-// Initialization using the mandatory SDK pattern
+/**
+ * Initialization of the Google GenAI SDK.
+ */
 const getAI = () => {
-  // Always check for a custom manually entered key first
   const customKey = window.localStorage.getItem('PECO_BUDDY_CUSTOM_KEY');
   const apiKey = customKey || process.env.API_KEY;
+  if (!apiKey) throw new Error("API Key required. Please connect in Settings.");
   return new GoogleGenAI({ apiKey });
 };
 
+/**
+ * Core API Wrapper with Deterministic Anchoring
+ * seed: 42 - The global scientific constant for this application.
+ * temperature: 0.1 - Low variance for high-precision extraction.
+ */
 export const callGeminiAPI = async (prompt, schema, statusContainer = null, config = {}) => {
-  const ai = getAI();
   const modelName = 'gemini-3-flash-preview';
 
-  const systemInstruction = `You are an expert scientific co-author for the Evidence-Based Toxicology Collaboration (EBTC).
-  Your task is to facilitate rigorous research design using the PECO framework.
+  const systemInstruction = `You are a high-level Linguistic Professor and Domain Expert in ${appState.heuristics.domainContext || 'Toxicology and Epidemiology'}, serving as a scientific co-author for the EBTC.
   
-  LOGICAL GRAMMAR RULES:
-  1. Use '&' to denote 'AND' / Co-existence.
-  2. Use ';' to denote 'OR' / Alternatives.
+  PECO RULES:
+  - Identify Population, Exposure, Comparison, and Outcome.
+  - MATRIX IDENTIFICATION: If a measurement site, biological matrix, or vehicle is mentioned (e.g. cord blood, urine, serum, air, soil), you MUST wrap it in curly braces: {matrix:maternal blood}.
+  - Use '&' for AND, ';' for OR within fields.
+  - NEVER use HTML or CSS in the JSON strings.
   
-  CONTEXTUAL RIGOR RULES:
-  - DISTINGUISH AGENT FROM MATRIX: "Lead" is the exposure. "Cord blood" is the measurement matrix. 
-  - PROHIBITED POPULATION: NEVER list a biological matrix (Blood, Urine, Cord, Serum, Tissues) as the 'Population' or 'Subject'.
-  - Measurement matrices must be noted in parentheses within the Exposure or Outcome field if relevant, e.g., "Lead (measured in: cord blood)".
-  - If multiple measurement matrices are alternatives, preserve the "OR" logic using ';'.
-  
-  RESPONSE RULES:
-  - ALWAYS respond in valid JSON matching the provided schema.
-  - Focus strictly on scientific validity and methodological rigor.`;
+  OUTPUT:
+  - Return ONLY valid JSON matching the schema.
+  - Use UK English spelling (e.g., 'fetal', 'haemoglobin').`;
+
+  const baseSeed = appState.heuristics.baseSeed || 42;
 
   try {
-    const response = await ai.models.generateContent({
+    const ai = getAI();
+    const result = await ai.models.generateContent({
       model: modelName,
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction,
         responseMimeType: schema ? "application/json" : "text/plain",
         responseSchema: schema || undefined,
-        temperature: 0.1, 
-        seed: 42,
+        temperature: 0.1,
+        seed: config.seed || baseSeed,
         ...config
       }
     });
 
-    const text = response.text;
-    if (!text) throw new Error('Empty response from AI.');
-    
+    const text = result.text;
+    if (!text) throw new Error("Empty response.");
+
+    appState.interactionLog.push({
+      timestamp: new Date().toISOString(),
+      prompt,
+      response: text
+    });
+
     if (schema) {
-      return JSON.parse(extractJsonFromString(text));
+      const jsonStr = extractJsonFromString(text);
+      return JSON.parse(jsonStr);
     }
     return text;
   } catch (error) {
+    console.error("Gemini Error:", error);
     if (statusContainer) showError(statusContainer, error.message);
     throw error;
   }
 };
 
-export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer) => {
-  const prompt = `Generate 3 research questions for a ${studyType} based on: "${scope}".
-  Ensure high precision. Distinguish between the exposure agent and the method of measurement (matrix).
-  Return JSON with questions array containing full_statement, population, exposure, comparison, outcome.`;
+/**
+ * ENHANCED: Context Logic Engine
+ * Performs high-level semantic deconstruction and terminology anchoring.
+ */
+export const callContextLogicEngineAPI = async (question) => {
+  const prompt = `Perform a high-level scientific logic deconstruction of this research question: "${question}".
+  
+  Identify:
+  1. The "Unit of Observation": The specific entity whose biology/status is measured for the outcome.
+  2. The "Exposure Vehicle": The route/entity through which the exposure happens (e.g., mother in prenatal studies).
+  3. "Species Context": Identify species (Human, Rat, Mouse, Zebrafish, etc.).
+  4. "Term Anchors": Define the preferred, contextually appropriate term for the Unit of Observation based on Species and Life Stage.
+  
+  DOMAIN LOGIC ANCHORS:
+  ${appState.heuristics.logicAnchors || 'No specific anchors provided.'}
+  
+  Return JSON with "unit_of_observation", "exposure_vehicle", "species_context", "preferred_population_term", "causal_logic".`;
+
+  const schema = {
+    type: Type.OBJECT,
+    properties: {
+      unit_of_observation: { type: Type.STRING },
+      exposure_vehicle: { type: Type.STRING },
+      species_context: { type: Type.STRING },
+      preferred_population_term: { type: Type.STRING },
+      causal_logic: { type: Type.STRING }
+    },
+    required: ["unit_of_observation", "exposure_vehicle", "species_context", "preferred_population_term", "causal_logic"]
+  };
+
+  return await callGeminiAPI(prompt, schema);
+};
+
+export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer, config = {}) => {
+  const baseSeed = appState.heuristics.baseSeed || 42;
+  // Apply generation offset to the base seed for ideation variety
+  const currentSeed = baseSeed + (config.seed ? (config.seed - 42) : 0);
+
+  const prompt = `Generate 3 distinct research questions for a ${studyType} based on: "${scope}". 
+  Tag measurement sites as {matrix:...}. 
+  Return JSON with "questions" array containing full_statement, population, exposure, comparison, outcome.`;
 
   const schema = {
     type: Type.OBJECT,
@@ -83,11 +134,14 @@ export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer)
     required: ["questions"]
   };
 
-  return await callGeminiAPI(prompt, schema, statusContainer);
+  return await callGeminiAPI(prompt, schema, statusContainer, { seed: currentSeed });
 };
 
-export const callDomainIdentifierAPI = async (text, statusContainer) => {
-  const prompt = `Identify scientific domain and raw PECO concepts: "${text}".`;
+export const callDomainIdentifierAPI = async (text, contextLogic = null) => {
+  const prompt = `Identify scientific domain and PECO concepts for: "${text}". 
+  ${contextLogic ? `CRITICAL LOGIC FRAME: The study concerns ${contextLogic.species_context}. The unit of observation is ${contextLogic.unit_of_observation}. The exposure is mediated via ${contextLogic.exposure_vehicle}.` : ''}
+  Tag matrices as {matrix:...}.`;
+  
   const schema = {
     type: Type.OBJECT,
     properties: {
@@ -99,38 +153,42 @@ export const callDomainIdentifierAPI = async (text, statusContainer) => {
     },
     required: ["domain", "raw_subject_population", "raw_intervention_exposure", "raw_comparison", "raw_outcome"]
   };
-  return await callGeminiAPI(prompt, schema, statusContainer);
+  return await callGeminiAPI(prompt, schema);
 };
 
-export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, studyType, statusContainer) => {
-  const prompt = `Refine PECO components for a ${studyType} in ${domain}. 
-  Context: "${fullText}". 
-  AGENT vs MATRIX: Identify the chemical/agent (e.g. Lead) as the exposure. Identify the matrix (e.g. Cord blood) only as a descriptor of where it is measured.
-  NEVER put a measurement matrix in the population field.
-  Use ';' for alternative measurement options.`;
+export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, studyType, contextLogic = null) => {
+  const prompt = `Extract precise PECO for ${studyType} in ${domain}. 
+  Text: "${fullText}". 
+  ${contextLogic ? `
+  MANDATORY CONSTRAINTS from Context Logic Engine:
+  - SPECIES: ${contextLogic.species_context}
+  - POPULATION TERM: You MUST use the term "${contextLogic.preferred_population_term}" for the Population field.
+  - UNIT OF OBSERVATION: Only include the "${contextLogic.unit_of_observation}" in the population, NOT the exposure vehicle (${contextLogic.exposure_vehicle}).
+  ` : ''}
+  Tag matrices as {matrix:...}.`;
   
   const schema = {
     type: Type.OBJECT,
     properties: {
       population: { type: Type.STRING },
-      exposure: { type: Type.STRING },
+      exposure: { type: Type.STRING }, 
       comparison: { type: Type.STRING },
       outcome: { type: Type.STRING }
     },
     required: ["population", "exposure", "comparison", "outcome"]
   };
-  return await callGeminiAPI(prompt, schema, statusContainer);
+  return await callGeminiAPI(prompt, schema);
 };
 
-export const callQuestionQualityAPI = async (question, peco, statusContainer) => {
-  const prompt = `Peer review this research question: "${question}" using its PECO components: ${JSON.stringify(peco)}.
+export const callQuestionQualityAPI = async (question, peco) => {
+  const prompt = `Audit question: "${question}" with PECO components: ${JSON.stringify(peco)}.
   
-  AUDIT RULES:
-  1. LOGICAL OPERATORS: Do NOT flag ';' (OR) or '&' (AND) as ambiguity. They are signs of scientific precision.
-  2. AGENT CHECK: If the exposure field ONLY contains a matrix (e.g. "Umbilical cord blood") without an agent (e.g. "Lead"), flag it as a missing exposure agent.
-  3. COMPONENT CHECK: If a component has text, it is NOT missing.
+  For any ambiguities found, ensure the 'reason' is phrased in a helpful, advisory tone rather than a critical one.
   
-  Return JSON with strengths, missing_components, and ambiguities.`;
+  LINGUISTIC TOLERANCE: 
+  - Treat '&', 'and', 'to', and hyphens '-' interchangeably when discussing numeric ranges (e.g., "6-12" is synonymous with "6 and 12" or "6 to 12" in range contexts). 
+  - Do not flag discrepancies for minor numeric formatting differences if the values are identical.
+  - Do not flag 'missing' components if they are implied by the study type context.`;
 
   const schema = {
     type: Type.OBJECT,
@@ -154,17 +212,11 @@ export const callQuestionQualityAPI = async (question, peco, statusContainer) =>
     },
     required: ["strengths", "missing_components", "ambiguities"]
   };
-  return await callGeminiAPI(prompt, schema, statusContainer);
+  return await callGeminiAPI(prompt, schema);
 };
 
 export const callPecoSynthesizerAPI = async (peco) => {
-  const prompt = `Synthesize one formal scientific research question using strictly: ${JSON.stringify(peco)}.
-  RULES: 
-  - Convert '&' into the word "and".
-  - Convert ';' into the word "or".
-  - Ensure the distinction between measurement matrices and agents is preserved (e.g., "...measured via umbilical cord blood or maternal blood...").
-  - Use formal EBTC publication style.`;
-  
+  const prompt = `Synthesise a formal research question from: ${JSON.stringify(peco)}. Keep {matrix:...} tags.`;
   const schema = {
     type: Type.OBJECT,
     properties: { semantic_statement: { type: Type.STRING } },

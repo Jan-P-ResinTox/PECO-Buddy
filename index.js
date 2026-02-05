@@ -1,3 +1,4 @@
+
 import { appState, dom } from './state.js';
 import { MODE_CONFIG } from './config.js';
 import { templates } from './views/templates.js';
@@ -29,6 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.sidebarToggleBtn = getEl('sidebar-toggle-btn');
         const toggleTooltipsBtn = getEl('toggle-tooltips-btn');
         const globalTooltip = getEl('global-tooltip');
+
+        // Load saved heuristics if available
+        const savedHeuristics = localStorage.getItem('PECO_BUDDY_HEURISTICS');
+        if (savedHeuristics) {
+            try {
+                appState.heuristics = JSON.parse(savedHeuristics);
+            } catch (e) { console.error("Failed to parse heuristics", e); }
+        }
 
         const renderToolkitView = () => {
             if (!dom.mainContent) return;
@@ -66,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showSettings = () => {
-            showModal('Settings & Analysis Engine', `<div class="modal-body p-6">${templates.settingsView}</div>`, (modal) => {
+            showModal('Settings & Analysis Engine', `<div class="modal-body p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">${templates.settingsView}</div>`, (modal) => {
                 const aiBtn = modal.querySelector('#modal-engine-ai-btn');
                 const nlpBtn = modal.querySelector('#modal-engine-nlp-btn');
                 const connectKeyBtn = modal.querySelector('#modal-connect-key-btn');
@@ -75,6 +84,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 const saveKeyBtn = modal.querySelector('#save-manual-key-btn');
                 const toggleKeyVisBtn = modal.querySelector('#toggle-key-visibility');
                 
+                const seedInput = modal.querySelector('#settings-seed-input');
+                const seedRange = modal.querySelector('#settings-seed-range');
+                const domainInput = modal.querySelector('#settings-domain-context');
+                const logicInput = modal.querySelector('#settings-logic-anchors');
+                const resetHeuristicsBtn = modal.querySelector('#settings-reset-heuristics');
+
+                // Initialize Domain Adaptation Inputs
+                if (domainInput) domainInput.value = appState.heuristics.domainContext;
+                if (logicInput) logicInput.value = appState.heuristics.logicAnchors;
+                const currentSeed = appState.heuristics.baseSeed || 42;
+                if (seedInput) seedInput.value = currentSeed;
+                if (seedRange) seedRange.value = currentSeed;
+
+                // Sync Range and Input
+                if (seedInput && seedRange) {
+                    seedRange.addEventListener('input', (e) => {
+                        seedInput.value = e.target.value;
+                    });
+                    seedInput.addEventListener('input', (e) => {
+                        seedRange.value = e.target.value;
+                    });
+                }
+
+                if (resetHeuristicsBtn) {
+                    resetHeuristicsBtn.onclick = () => {
+                        domainInput.value = "Toxicology and Epidemiology";
+                        logicInput.value = "- Human + Prenatal/Birth -> Use 'Infants' or 'Children'.\n- Rodent + Prenatal/Birth -> Use 'Pups'.\n- Human + Pregnancy -> Use 'Pregnant Women'.\n- Zebrafish + Early Stage -> Use 'Larvae' or 'Embryos'.";
+                        if(seedInput) seedInput.value = 42;
+                        if(seedRange) seedRange.value = 42;
+                        ToastService.show("Heuristics reset to default. Click Done to save.", "info");
+                    };
+                }
+
                 // Initialize manual key from storage
                 if (manualKeyInput) {
                     manualKeyInput.value = window.localStorage.getItem('PECO_BUDDY_CUSTOM_KEY') || '';
@@ -85,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const key = manualKeyInput.value.trim();
                         window.localStorage.setItem('PECO_BUDDY_CUSTOM_KEY', key);
                         if (key) {
-                            ToastService.show("Manual API Key saved successfully.", "success");
+                            ToastService.show("Manual API Key saved successfully to local storage.", "success");
                             saveKeyBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Saved';
                             setTimeout(() => { saveKeyBtn.innerText = 'Save Key'; }, 2000);
                         } else {
@@ -141,15 +183,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 updateSelection();
             }, (modal, close) => {
-                const foot = modal.querySelector('.modal-container').appendChild(document.createElement('div'));
+                const container = modal.querySelector('.modal-container, .report-modal-container');
+                const foot = container.appendChild(document.createElement('div'));
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
                 foot.innerHTML = `<button class="bg-teal-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Done</button>`;
                 foot.onclick = () => {
-                    // One final check to save if they entered something but didn't hit save
+                    // One final check to save if they entered something but didn't hit save button
                     const input = modal.querySelector('#modal-manual-key-input');
                     if (input) {
                         window.localStorage.setItem('PECO_BUDDY_CUSTOM_KEY', input.value.trim());
                     }
+
+                    // Save Heuristics
+                    const domainInput = modal.querySelector('#settings-domain-context');
+                    const logicInput = modal.querySelector('#settings-logic-anchors');
+                    const seedInput = modal.querySelector('#settings-seed-input');
+                    
+                    if (domainInput && logicInput && seedInput) {
+                        appState.heuristics = {
+                            domainContext: domainInput.value.trim(),
+                            logicAnchors: logicInput.value.trim(),
+                            baseSeed: parseInt(seedInput.value) || 42
+                        };
+                        localStorage.setItem('PECO_BUDDY_HEURISTICS', JSON.stringify(appState.heuristics));
+                    }
+
                     close();
                     if (appState.currentMode === 'peco_toolkit') {
                         renderToolkitView();
@@ -159,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showUserManual = () => {
-            showModal('User Manual v8.0 Beta', `<div class="modal-body p-6">${templates.userManualView}</div>`, (modal) => {
+            showModal('User Manual v8.1.1 Beta', `<div class="modal-body p-6">${templates.userManualView}</div>`, (modal) => {
                 const searchInput = modal.querySelector('#manual-search-input');
                 const contentContainer = modal.querySelector('#manual-content-container');
                 const sections = modal.querySelectorAll('.manual-section');
@@ -201,7 +259,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }, (modal, close) => {
-                const foot = modal.querySelector('.modal-container').appendChild(document.createElement('div'));
+                const container = modal.querySelector('.modal-container, .report-modal-container');
+                const foot = container.appendChild(document.createElement('div'));
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
                 foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold">Close Manual</button>`;
                 foot.onclick = close;
@@ -209,8 +268,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showRationale = () => {
-            showModal('Version 8.0 Rationale', `<div class="modal-body p-6">${templates.versionRationaleView}</div>`, null, (modal, close) => {
-                const foot = modal.querySelector('.modal-container').appendChild(document.createElement('div'));
+            showModal('Version 8.1.1 Rationale', `<div class="modal-body p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">${templates.versionRationaleView}</div>`, null, (modal, close) => {
+                const container = modal.querySelector('.modal-container, .report-modal-container');
+                const foot = container.appendChild(document.createElement('div'));
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
                 foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold">Close</button>`;
                 foot.onclick = close;
@@ -218,8 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showCopyright = () => {
-            showModal('Legal Notice', `<div class="modal-body p-6">${templates.copyrightView}</div>`, null, (modal, close) => {
-                const foot = modal.querySelector('.modal-container').appendChild(document.createElement('div'));
+            showModal('Legal Notice', `<div class="modal-body p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">${templates.copyrightView}</div>`, null, (modal, close) => {
+                const container = modal.querySelector('.modal-container, .report-modal-container');
+                const foot = container.appendChild(document.createElement('div'));
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
                 foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold">Close</button>`;
                 foot.onclick = close;
