@@ -1,11 +1,11 @@
-
 import { appState, dom } from '../state.js';
 import { templates } from './templates.js';
 import { ToastService } from '../components/toast.js';
 import { PECO_MAP } from '../config.js';
 import * as GeminiAPI from '../api/gemini.js';
 import { showModal } from '../components/modal.js';
-import { formatPecoForDisplay, renderScientificText, showLoading, showError, copyTableToClipboard, escapeHtml } from '../utils.js';
+import { formatPecoForDisplay, styleMatrices, showLoading, showError, copyTableToClipboard, escapeHtml } from '../utils.js';
+import { showTransparencyLogModal } from './reviewPeco.js';
 
 const BASIC_STUDY_TYPES = [
     { id: 'systematic_review', name: 'Systematic Review', icon: 'fa-magnifying-glass-chart' },
@@ -39,6 +39,10 @@ export const initAuthorToolkitFlow = () => {
     const contentContainer = stepEl.querySelector('.step-content');
     if (!contentContainer) return;
 
+    if (appState.authorWorkflow.currentStep === stepId) {
+        stepEl.classList.add('active');
+    }
+
     switch(stepId) {
       case 'step-ideation':
         contentContainer.innerHTML = templates.ideationView;
@@ -59,14 +63,19 @@ export const initAuthorToolkitFlow = () => {
       header.onclick = () => {
         const isActive = stepEl.classList.contains('active');
         document.querySelectorAll('.workflow-step').forEach(s => s.classList.remove('active'));
-        if (!isActive) stepEl.classList.add('active');
-        appState.authorWorkflow.currentStep = stepId;
+        if (!isActive) {
+            stepEl.classList.add('active');
+            appState.authorWorkflow.currentStep = stepId;
+            if (stepId === 'step-clarity') {
+                initClarityView(stepEl.querySelector('.step-content'));
+            }
+            if (stepId === 'step-peco-workshop') {
+                initPecoWorkshopView(stepEl.querySelector('.step-content'));
+            }
+        }
       };
     }
   });
-
-  const currentStepId = appState.authorWorkflow.currentStep || 'step-ideation';
-  document.getElementById(currentStepId)?.classList.add('active');
 };
 
 const jumpToStep = (stepId) => {
@@ -76,80 +85,47 @@ const jumpToStep = (stepId) => {
     target.classList.add('active');
     appState.authorWorkflow.currentStep = stepId;
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    const content = target.querySelector('.step-content');
+    if (stepId === 'step-clarity') {
+        initClarityView(content);
+    } else if (stepId === 'step-peco-workshop') {
+        initPecoWorkshopView(content);
+    }
   }
 };
 
-/**
- * Shared logic to display the interaction log modal.
- */
-function showTransparencyLogModal() {
-    const logItems = appState.interactionLog.map((item, idx) => `
-        <div class="p-6 border-b last:border-0 hover:bg-slate-50 transition-colors">
-            <div class="flex justify-between items-start mb-4">
-                <div class="flex items-center gap-3">
-                    <span class="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-extrabold text-xs">${idx + 1}</span>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${new Date(item.timestamp).toLocaleTimeString('en-GB')}</span>
-                </div>
-                <span class="px-2 py-1 bg-teal-100 text-teal-700 rounded text-[9px] font-extrabold uppercase">Audit Step</span>
-            </div>
-            
-            <div class="space-y-4">
-                <div>
-                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Scientific Prompt</h5>
-                    <div class="p-4 bg-slate-900 text-slate-300 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed">${escapeHtml(item.prompt)}</div>
-                </div>
-                <div>
-                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Gemini JSON Synthesis</h5>
-                    <div class="p-4 bg-teal-50 text-teal-900 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed border border-teal-100">${escapeHtml(item.response)}</div>
+const showProgressGauge = (container, message, progress = 0, subMessage = "") => {
+    const radius = 45;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (circumference * (progress / 100));
+    container.innerHTML = `
+        <div class="progress-gauge-container animate-fade-in">
+            <div class="gauge relative w-44 h-44">
+                <svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
+                    <circle class="bg" cx="50" cy="50" r="${radius}" fill="none" stroke="#f1f5f9" stroke-width="10"></circle>
+                    <circle class="progress" cx="50" cy="50" r="${radius}" fill="none" stroke="#0d9488" stroke-width="10" stroke-linecap="round" style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset}"></circle>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                   <div class="text-4xl font-extrabold text-teal-600">${Math.round(progress)}%</div>
                 </div>
             </div>
-        </div>
-    `).join('');
-
-    const content = `
-        <div class="report-modal-content flex-grow overflow-y-auto custom-scrollbar">
-            <div class="p-8 bg-slate-50 border-b">
-                <p class="text-sm text-slate-600 mb-4">This session log captures every semantic negotiation between the PECO-Buddy Co-Pilot and the Gemini Science Robot. It is provided for total methodological transparency.</p>
-                <div class="flex gap-4">
-                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Trace Depth: ${appState.interactionLog.length} Steps</div>
-                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Engine: Gemini-3-Flash</div>
+            <div class="text-center space-y-2">
+                <p class="text-2xl font-bold text-slate-800 tracking-tight leading-tight">${message}</p>
+                ${subMessage ? `<p class="text-[10px] font-bold text-teal-600 uppercase tracking-widest">${subMessage}</p>` : ''}
+                <div class="running-dots flex justify-center gap-2 mt-4">
+                    <span class="w-1.5 h-1.5 rounded-full bg-teal-600 animate-bounce"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-teal-600 animate-bounce" style="animation-delay: 0.1s"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-teal-600 animate-bounce" style="animation-delay: 0.2s"></span>
                 </div>
-            </div>
-            <div class="bg-white">
-                ${logItems.length > 0 ? logItems : '<p class="p-12 text-center text-slate-400 italic font-medium">No interactions recorded in the current session. Begin analysis to generate logs.</p>'}
             </div>
         </div>
     `;
-
-    showModal('Extended Transparency Log', content, null, (modal, close) => {
-        const container = modal.querySelector('.modal-container, .report-modal-container');
-        if (!container) return; // Defensive
-        const foot = container.appendChild(document.createElement('div'));
-        foot.className = 'modal-footer p-4 border-t flex justify-end gap-3';
-        foot.innerHTML = `
-            <button class="bg-slate-200 text-slate-700 px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest">Close</button>
-            <button id="download-toolkit-log-btn" class="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Download Trace (.json)</button>
-        `;
-        foot.querySelector('button').onclick = close;
-        const dlBtn = foot.querySelector('#download-toolkit-log-btn');
-        if (dlBtn) {
-            dlBtn.onclick = () => {
-                const blob = new Blob([JSON.stringify(appState.interactionLog, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `peco-toolkit-trace-${new Date().getTime()}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-                ToastService.show('Semantic trace downloaded.', 'success');
-            };
-        }
-    }, true);
-}
+};
 
 function initIdeationView(container) {
   const generateBtn = container.querySelector('#generate-ideation-btn');
-  const useOwnBtn = container.querySelector('#use-own-question-btn');
+  const continueOwnBtn = container.querySelector('#continue-own-question-btn');
   const scopeInput = container.querySelector('#ideation-scope-input');
   const resultsContainer = container.querySelector('#ideation-results-container');
   const studyTypeSelector = container.querySelector('#study-type-selector');
@@ -162,9 +138,9 @@ function initIdeationView(container) {
   const renderStudyTypes = () => {
     const list = activeFilter === 'basic' ? BASIC_STUDY_TYPES : EXTENDED_STUDY_TYPES;
     studyTypeSelector.innerHTML = list.map(st => `
-        <button class="study-type-btn p-3 border rounded-xl flex flex-col items-center gap-2 hover:bg-slate-50 transition-all ${appState.authorWorkflow.ideationData.selectedStudyType?.id === st.id ? 'bg-teal-50 border-teal-500' : ''}" data-id="${st.id}" data-name="${st.name}">
-          <i class="fa-solid ${st.icon} text-xl text-teal-600"></i>
-          <span class="text-[10px] font-bold uppercase text-center leading-tight h-8 flex items-center justify-center">${st.name}</span>
+        <button class="study-type-btn ${appState.authorWorkflow.ideationData.selectedStudyType?.id === st.id ? 'active' : ''}" data-id="${st.id}" data-name="${st.name}">
+          <i class="fa-solid ${st.icon} text-teal-600"></i>
+          <span class="text-[12px] font-bold uppercase tracking-widest text-center">${st.name}</span>
         </button>
       `).join('');
   };
@@ -172,15 +148,8 @@ function initIdeationView(container) {
   const updateUI = () => {
     const hasText = scopeInput.value.trim().length > 0;
     studyTypePhase.classList.toggle('hidden', !hasText);
-    
-    // Logic for Generate button
     generateBtn.disabled = !hasText || !appState.authorWorkflow.ideationData.selectedStudyType;
-    generateBtn.textContent = hasText ? 'Generate Suggestions' : 'Enter Scope & Type';
-
-    // Logic for Own Question button
-    if (useOwnBtn) {
-        useOwnBtn.disabled = !hasText || !appState.authorWorkflow.ideationData.selectedStudyType;
-    }
+    if (continueOwnBtn) continueOwnBtn.disabled = !hasText;
   };
 
   scopeInput.value = appState.authorWorkflow.ideationData.scopeText || '';
@@ -194,15 +163,15 @@ function initIdeationView(container) {
 
   toggleBasic.onclick = () => {
     activeFilter = 'basic';
-    toggleBasic.className = "px-4 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-lg transition-all bg-white text-teal-600 shadow-sm";
-    toggleExtended.className = "px-4 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-lg transition-all text-slate-500 hover:text-slate-800";
+    toggleBasic.className = "px-6 py-2 text-[12px] font-extrabold uppercase tracking-wider rounded-xl transition-all bg-white text-teal-600 shadow-sm";
+    toggleExtended.className = "px-6 py-2 text-[12px] font-extrabold uppercase tracking-wider rounded-xl transition-all text-slate-500 hover:text-slate-800";
     renderStudyTypes();
   };
 
   toggleExtended.onclick = () => {
     activeFilter = 'extended';
-    toggleExtended.className = "px-4 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-lg transition-all bg-white text-teal-600 shadow-sm";
-    toggleBasic.className = "px-4 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-lg transition-all text-slate-500 hover:text-slate-800";
+    toggleExtended.className = "px-6 py-2 text-[12px] font-extrabold uppercase tracking-wider rounded-xl transition-all bg-white text-teal-600 shadow-sm";
+    toggleBasic.className = "px-6 py-2 text-[12px] font-extrabold uppercase tracking-wider rounded-xl transition-all text-slate-500 hover:text-slate-800";
     renderStudyTypes();
   };
 
@@ -210,62 +179,45 @@ function initIdeationView(container) {
     const btn = e.target.closest('button');
     if (!btn) return;
     appState.authorWorkflow.ideationData.selectedStudyType = { id: btn.dataset.id, name: btn.dataset.name };
-    
-    // RESET generationCount as requested when a new study type is clicked
-    appState.authorWorkflow.ideationData.generationCount = 0;
-    
-    studyTypeSelector.querySelectorAll('button').forEach(b => b.classList.remove('bg-teal-50', 'border-teal-500'));
-    btn.classList.add('bg-teal-50', 'border-teal-500');
+    studyTypeSelector.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
     updateUI();
   };
 
   generateBtn.onclick = async () => {
-    showLoading(resultsContainer, 'Consulting Scientific Co-Author...');
+    showProgressGauge(resultsContainer, 'Generating Suggestions...', 30, "Initialising Engine");
     try {
-      // IMPLEMENT progressive seed logic: Base 42 + increment count per session/study-type
-      const currentSeed = 42 + (appState.authorWorkflow.ideationData.generationCount || 0);
-      
       const result = await GeminiAPI.callAdvancedIdeationAPI(
         appState.authorWorkflow.ideationData.scopeText,
         appState.authorWorkflow.ideationData.selectedStudyType.name,
         resultsContainer,
-        { seed: currentSeed }
+        { seed: appState.globalSeed }
       );
-      
+      showProgressGauge(resultsContainer, 'Generating Suggestions...', 100, "Finalising Results");
       if (result && result.questions) {
           appState.authorWorkflow.ideationData.generatedSuggestions = result.questions;
-          
-          // INCREMENT count for next potential click to provide variations while remaining deterministic
-          appState.authorWorkflow.ideationData.generationCount = (appState.authorWorkflow.ideationData.generationCount || 0) + 1;
-          
-          renderSuggestions();
-      } else {
-          throw new Error("Model returned invalid question format.");
+          setTimeout(() => renderSuggestions(), 500);
       }
-    } catch(e) { 
-        showError(resultsContainer, e.message); 
-    }
+    } catch(e) { showError(resultsContainer, e.message); }
   };
-  
-  if (useOwnBtn) {
-      useOwnBtn.onclick = () => {
-          const text = scopeInput.value;
+
+  if (continueOwnBtn) {
+    continueOwnBtn.onclick = () => {
+      const text = scopeInput.value.trim();
+      if (text) {
           appState.authorWorkflow.clarityData.researchQuestion = text;
-          // Reset PECO as we want the AI to extract it from the "own question" in step 2
           appState.authorWorkflow.liveCoAuthorData.peco = { population: '', exposure: '', comparison: '', outcome: '' };
-          
           jumpToStep('step-clarity');
-          const container = document.getElementById('step-clarity').querySelector('.step-content');
-          initClarityView(container, true);
-      };
+      }
+    };
   }
 
   const renderSuggestions = () => {
-    resultsContainer.innerHTML = appState.authorWorkflow.ideationData.generatedSuggestions.map((q, i) => `
-      <div class="bg-white p-5 rounded-2xl border mb-4 shadow-sm hover:shadow-md transition-shadow">
-        <p class="font-bold text-slate-800">"${renderScientificText(q.full_statement)}"</p>
-        <div class="text-right mt-4">
-          <button class="select-q-btn bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider" data-index="${i}">Develop this Question</button>
+    resultsContainer.innerHTML = (appState.authorWorkflow.ideationData.generatedSuggestions || []).map((q, i) => `
+      <div class="bg-white p-8 rounded-3xl border mb-6 shadow-sm hover:shadow-md transition-shadow">
+        <p class="font-bold text-slate-800 text-lg">"${styleMatrices(q.full_statement, 'display')}"</p>
+        <div class="text-right mt-6">
+          <button class="select-q-btn bg-teal-600 hover:bg-teal-700 text-white px-10 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest" data-index="${i}">Develop this Question</button>
         </div>
       </div>
     `).join('');
@@ -273,15 +225,8 @@ function initIdeationView(container) {
       btn.onclick = () => {
         const q = appState.authorWorkflow.ideationData.generatedSuggestions[btn.dataset.index];
         appState.authorWorkflow.clarityData.researchQuestion = q.full_statement;
-        appState.authorWorkflow.liveCoAuthorData.peco = { 
-          population: q.population || '', 
-          exposure: q.exposure || '', 
-          comparison: q.comparison || '', 
-          outcome: q.outcome || '' 
-        };
+        appState.authorWorkflow.liveCoAuthorData.peco = { population: q.population || '', exposure: q.exposure || '', comparison: q.comparison || '', outcome: q.outcome || '' };
         jumpToStep('step-clarity');
-        const container = document.getElementById('step-clarity').querySelector('.step-content');
-        initClarityView(container, true);
       };
     });
   };
@@ -289,306 +234,465 @@ function initIdeationView(container) {
   if (appState.authorWorkflow.ideationData.generatedSuggestions.length > 0) renderSuggestions();
 }
 
-function initClarityView(container, autoRun = false) {
+function smartAdaptTerm(currentValue, suggestion) {
+    if (!currentValue) return suggestion;
+    const getRoot = (str) => str.split(/[\(\,]/)[0].trim().toLowerCase();
+    const suggestionRoot = getRoot(suggestion);
+    const normalizedSuggestion = suggestion.trim().toLowerCase();
+    const existingTerms = currentValue.split(/[;&]/).map(t => t.trim().toLowerCase());
+    
+    if (existingTerms.includes(normalizedSuggestion)) return currentValue;
+
+    return `${currentValue} ; ${suggestion}`;
+}
+
+function initClarityView(container) {
   const dashboardContainer = container.querySelector('#clarity-dashboard-container');
   const footerContainer = container.querySelector('#clarity-footer-container');
   const questionDisplay = container.querySelector('#research-question-display');
   const scoreBtn = container.querySelector('#score-clarity-btn');
+  const depthGroup = container.querySelector('#depth-selector-group');
 
   if (!dashboardContainer || !footerContainer || !questionDisplay || !scoreBtn) return;
 
-  const runAnalysis = async (providedPeco = null) => {
-    showLoading(dashboardContainer, 'Calibrating Context Logic & Terminology...');
-    scoreBtn.disabled = true;
-    scoreBtn.innerHTML = '<div class="loader inline-block"></div> UPDATING...';
+  const refreshDisplay = () => {
+      const q = appState.authorWorkflow.clarityData.researchQuestion;
+      questionDisplay.innerHTML = q ? `"${styleMatrices(q, 'display')}"` : '<span class="text-slate-300 font-medium">Awaiting selection from Step 1...</span>';
+  };
+  refreshDisplay();
+
+  if (depthGroup) {
+      depthGroup.querySelectorAll('.depth-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.depth === appState.authorWorkflow.clarityData.analysisDepth);
+          btn.onclick = () => {
+              appState.authorWorkflow.clarityData.analysisDepth = btn.dataset.depth;
+              depthGroup.querySelectorAll('.depth-btn').forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+          };
+      });
+  }
+
+  const runAnalysis = async (isRefresh = false) => {
+    if (!isRefresh) {
+        scoreBtn.disabled = true;
+        scoreBtn.innerHTML = '<div class="loader inline-block"></div> ANALYSING...';
+    }
 
     try {
+      showProgressGauge(dashboardContainer, isRefresh ? 'Re-analysing Logic Strategy...' : 'Analysing Logic Structure...', 15, "Extracting Semantic Domains");
+      
       const q = appState.authorWorkflow.clarityData.researchQuestion;
-      let peco, analysis;
+      const config = { seed: appState.globalSeed };
+      if (appState.authorWorkflow.clarityData.analysisDepth === 'thorough') config.thinkingConfig = { thinkingBudget: 2048 };
+      
+      const contextLogic = await GeminiAPI.callContextLogicEngineAPI(q);
+      showProgressGauge(dashboardContainer, 'Deconstructing Linguistic Syntax...', 50, "Scanning Context");
+      const prelim = await GeminiAPI.callDomainIdentifierAPI(q, contextLogic);
+      showProgressGauge(dashboardContainer, 'Mapping Matrix Intersections...', 75, "Verification Phase");
+      const peco = await GeminiAPI.callSpecialistPecoExtractorAPI(prelim.domain, prelim, q, appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General', contextLogic);
+      const analysis = await GeminiAPI.callQuestionQualityAPI(q, peco, dashboardContainer, config);
+      showProgressGauge(dashboardContainer, 'Finalising Advisory Feed...', 100, "Synthesis Complete");
 
-      if (appState.analysisEngine === 'ai') {
-          // STEP 1: Calibrate Context & Species Mapping
-          const contextLogic = await GeminiAPI.callContextLogicEngineAPI(q);
-          
-          if (providedPeco) {
-            peco = { ...providedPeco };
-          } else {
-            // STEP 2: Identify Domain (with context)
-            showLoading(dashboardContainer, 'Identifying Scientific Domain...');
-            const prelim = await GeminiAPI.callDomainIdentifierAPI(q, contextLogic);
-            
-            // STEP 3: Specialist Extraction (constrained by context and terminology anchors)
-            showLoading(dashboardContainer, `Extracting PECO (Anchored to ${contextLogic.preferred_population_term})...`);
-            peco = await GeminiAPI.callSpecialistPecoExtractorAPI(
-                prelim.domain, 
-                prelim, 
-                q, 
-                appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General',
-                contextLogic
-            );
-          }
-          
-          // STEP 4: Quality Audit
-          showLoading(dashboardContainer, 'Auditing Question Quality...');
-          analysis = await GeminiAPI.callQuestionQualityAPI(q, peco);
-      } else {
-          peco = providedPeco ? { ...providedPeco } : { population: '', exposure: '', comparison: '', outcome: '' };
-          if (!providedPeco) {
-              appState.nlpTerms.forEach(t => {
-                  if (q.toLowerCase().includes(t.term.toLowerCase())) {
-                      peco[t.category] += (peco[t.category] ? ' & ' : '') + t.term;
-                  }
-              });
-          }
-          analysis = { strengths: ["Local rule matching completed."], missing_components: [], ambiguities: [] };
-          Object.keys(peco).forEach(k => { if(!peco[k]) analysis.missing_components.push(k); });
+      if (!appState.authorWorkflow.liveCoAuthorData.peco || !Object.values(appState.authorWorkflow.liveCoAuthorData.peco).some(v => !!v)) {
+        appState.authorWorkflow.liveCoAuthorData.peco = peco;
       }
-
-      appState.authorWorkflow.liveCoAuthorData.peco = peco;
       appState.authorWorkflow.clarityData.analysis = analysis;
-      
-      let score = 100;
-      score -= (analysis.missing_components.length * 15);
-      score -= (analysis.ambiguities.length * 10);
-      appState.authorWorkflow.clarityData.qualityScore = Math.max(0, score);
-      
-      renderResults();
+      setTimeout(() => renderResults(), 800);
     } catch(e) { showError(dashboardContainer, e.message); }
     finally {
         scoreBtn.disabled = false;
-        scoreBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> UPDATE QUESTION & DASHBOARD';
+        scoreBtn.innerHTML = '<i class="fa-solid fa-play"></i> Analyse';
+    }
+  };
+
+  const syncAllProtocol = async () => {
+    try {
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'absolute inset-0 bg-white/50 backdrop-blur-[2px] z-20 flex items-center justify-center';
+        loadingOverlay.innerHTML = '<div class="loader"></div>';
+        questionDisplay.style.position = 'relative';
+        questionDisplay.appendChild(loadingOverlay);
+
+        const synth = await GeminiAPI.callPecoSynthesizerAPI(appState.authorWorkflow.liveCoAuthorData.peco);
+        appState.authorWorkflow.clarityData.researchQuestion = synth.semantic_statement;
+        appState.authorWorkflow.pecoWorkshopData = { peco: synth.naturalised_peco };
+        
+        refreshDisplay();
+        ToastService.show("Protocol statement synthesized. Click 'Analyse' to refresh advisory.", "success");
+    } catch (err) { 
+        ToastService.show("Update failed: " + err.message, "error"); 
+    } finally {
+        const overlay = questionDisplay.querySelector('.loader')?.parentElement;
+        if(overlay) overlay.remove();
     }
   };
 
   const renderResults = () => {
     const { analysis, isAnalysisCollapsed, researchQuestion } = appState.authorWorkflow.clarityData;
-    const peco = appState.authorWorkflow.liveCoAuthorData.peco;
-
-    // RENDER rich-text statement into the display div
-    questionDisplay.innerHTML = `"${renderScientificText(researchQuestion)}"`;
+    const peco = appState.authorWorkflow.liveCoAuthorData.peco || {};
+    const frozenComponents = appState.authorWorkflow.clarityData.frozenComponents || {};
+    
+    questionDisplay.innerHTML = `"${styleMatrices(researchQuestion, 'display')}"`;
 
     dashboardContainer.innerHTML = `
-      <div class="bg-white p-10 rounded-[2rem] border shadow-sm">
-        <div class="flex justify-between items-center mb-10">
-          <div class="flex items-center gap-4">
-             <h4 class="text-xs font-extrabold uppercase text-slate-400 tracking-widest">Potential Improvements Dashboard</h4>
-             <!-- Quality Verified badge removed as per request -->
-          </div>
-          <div class="flex gap-4 items-center">
-            <button id="toggle-dashboard-btn" class="text-xs font-bold text-teal-600 underline">${isAnalysisCollapsed ? 'View Dashboard' : 'Minimise Dashboard'}</button>
-          </div>
-        </div>
-
-        <div id="gauge-container" class="analysis-collapsible ${isAnalysisCollapsed ? 'collapsed' : ''}" style="max-height: 2000px">
-          <div class="flex flex-col lg:flex-row items-start gap-12">
-            
-            <div class="flex-grow w-full">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    ${Object.keys(PECO_MAP).map(key => {
-                        const isMissing = analysis.missing_components.some(m => m.toLowerCase().includes(key));
-                        const componentAmbiguities = analysis.ambiguities.filter(a => a.component.toLowerCase().includes(key));
-                        
-                        return `
-                        <div class="peco-dashboard-card group bg-slate-50/50 p-6 rounded-3xl border border-slate-100 hover:border-teal-500 transition-all flex flex-col gap-4 relative" data-key="${key}">
-                            <div class="flex justify-between items-center">
-                                <span class="text-[10px] font-extrabold uppercase tracking-widest" style="color:${PECO_MAP[key].color}">${PECO_MAP[key].label}</span>
-                                <button class="edit-peco-btn text-slate-300 hover:text-teal-600 transition-colors"><i class="fa-solid fa-pen-to-square"></i></button>
-                            </div>
-                            
-                            <div class="peco-display-mode text-sm text-slate-700 font-bold leading-relaxed">
-                                ${formatPecoForDisplay(peco[key])}
-                            </div>
-                            
-                            <div class="peco-edit-mode">
-                                <textarea class="w-full text-sm p-3 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 outline-none font-bold" rows="2">${peco[key]}</textarea>
-                                <button class="save-peco-btn w-full bg-teal-600 text-white text-[10px] py-2 rounded-xl mt-3 font-bold uppercase shadow-sm">Sync and Re-Analyse</button>
-                            </div>
-
-                            <div class="peco-feedback-space space-y-2">
-                                ${isMissing ? `
-                                    <div class="flex items-center gap-2 p-3 bg-red-100 text-red-700 rounded-xl text-[10px] font-extrabold border border-red-200">
-                                        <i class="fa-solid fa-circle-exclamation"></i> MISSING COMPONENT
-                                    </div>` : ''}
-                                ${componentAmbiguities.map(a => `
-                                    <div class="p-3 bg-amber-50 text-amber-900 rounded-xl text-[10px] font-bold border border-amber-200 flex items-start gap-2">
-                                        <!-- Advisory message icon removed -->
-                                        <span>"${a.term}": ${a.reason}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>`;
-                    }).join('')}
-                </div>
+      <div class="bg-white p-8 md:p-14 rounded-[3.5rem] border shadow-sm">
+        <div class="flex justify-between items-center mb-10 px-4">
+          <div class="flex flex-col gap-1">
+            <h4 class="text-sm font-extrabold uppercase text-slate-400 tracking-widest">Scientific Advisory Feed</h4>
+            <div class="flex gap-2 mt-2">
+                <button id="sync-all-btn" class="text-[10px] font-extrabold text-teal-600 bg-teal-50 px-4 py-2 rounded-xl border border-teal-100 uppercase tracking-widest hover:bg-teal-100 transition-colors">
+                    <i class="fa-solid fa-arrows-rotate mr-2"></i> Update Protocol Statement
+                </button>
+                <button id="refresh-audit-btn" class="text-[10px] font-extrabold text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-teal-100 uppercase tracking-widest hover:bg-teal-100 transition-colors">
+                    <i class="fa-solid fa-wand-sparkles mr-2"></i> Refresh Advisory
+                </button>
             </div>
           </div>
+          <button id="toggle-gauge-btn" class="text-xs font-bold text-teal-600 underline">${isAnalysisCollapsed ? 'View Cards' : 'Minimise'}</button>
+        </div>
+
+        <div class="analysis-collapsible ${isAnalysisCollapsed ? 'collapsed' : ''}">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                ${Object.keys(PECO_MAP).map(key => {
+                    const isFrozen = frozenComponents[key];
+                    const componentFeedback = (analysis?.feedback || []).find(f => f.component.toLowerCase().includes(key));
+                    const suggestions = componentFeedback?.suggestions || [];
+                    const currentValue = peco[key] || '';
+                    
+                    return `
+                    <div class="peco-dashboard-card bg-slate-50/50 rounded-3xl border border-slate-100 p-8 hover:border-teal-500 transition-all flex flex-col gap-8 relative overflow-hidden" data-key="${key}">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[12px] font-extrabold uppercase tracking-widest" style="color:${PECO_MAP[key].color}">${PECO_MAP[key].label}</span>
+                            <div class="flex gap-2">
+                                <button class="freeze-component-btn px-4 py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all shadow-sm ${isFrozen ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white border-slate-200 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}" title="I am happy with this">
+                                    ${isFrozen ? '<i class="fa-solid fa-lock mr-1"></i> Locked' : '<i class="fa-regular fa-thumbs-up mr-1"></i> Happy'}
+                                </button>
+                                <button class="edit-peco-toggle-btn bg-white border border-slate-200 px-6 py-2 rounded-xl text-[10px] font-extrabold uppercase text-slate-500 hover:bg-slate-100 shadow-sm">
+                                    <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="peco-display-mode text-base text-slate-700 font-bold leading-relaxed min-h-[50px] break-words">
+                            ${formatPecoForDisplay(currentValue, false)}
+                        </div>
+
+                        <div class="peco-edit-mode animate-fade-in" style="display:none">
+                            <div class="p-6 bg-white border rounded-2xl mb-4 min-h-[80px] flex flex-wrap gap-2 peco-pill-container shadow-inner">
+                                ${formatPecoForDisplay(currentValue, true)}
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" placeholder="Add term..." class="flex-grow text-sm p-3 border rounded-xl outline-none pill-manual-input">
+                                <button class="add-manual-pill-btn bg-slate-800 text-white px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest">Add</button>
+                            </div>
+                            <div class="mt-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <i class="fa-solid fa-circle-info"></i> Use & for AND logic, ; for OR logic
+                            </div>
+                            <button class="save-peco-btn w-full bg-teal-600 text-white text-[10px] py-4 rounded-xl mt-4 font-extrabold uppercase shadow-lg hover:bg-teal-700">Apply Changes</button>
+                        </div>
+
+                        <div class="peco-feedback-hub border-t border-slate-100 pt-8 mt-auto overflow-hidden">
+                            ${isFrozen ? 
+                                `<div class="p-6 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100 text-center">
+                                    <i class="fa-solid fa-check-circle text-2xl mb-2"></i>
+                                    <p class="text-xs font-bold uppercase tracking-widest">Component Finalised</p>
+                                    <p class="text-[10px] opacity-70 mt-1">AI suggestions disabled for this section.</p>
+                                 </div>` 
+                            : 
+                                (suggestions.length > 0 ? `
+                                <div class="suggestion-carousel" data-component="${key}">
+                                    <div class="suggestion-slides">
+                                        ${suggestions.map((s, sIdx) => `
+                                            <div class="suggestion-slide ${sIdx === 0 ? 'active' : ''}" data-index="${sIdx}">
+                                                <div class="p-8 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm mb-4 min-h-[220px] flex flex-col relative">
+                                                    <div class="mb-4 flex justify-between items-start">
+                                                        <div>
+                                                            <span class="text-[9px] font-extrabold uppercase tracking-widest text-teal-600 block mb-1">Proposed Resolution</span>
+                                                            <div class="bg-teal-50 px-4 py-2 rounded-xl border border-teal-100 inline-block text-teal-800 font-bold text-[12px] shadow-sm">${styleMatrices(s.refined_term, 'display')}</div>
+                                                        </div>
+                                                        <span class="text-[9px] font-extrabold bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase tracking-tighter">Precision +</span>
+                                                    </div>
+                                                    <p class="text-[12px] text-slate-700 leading-relaxed font-semibold mb-6 break-words">${s.advisory_message}</p>
+                                                    <div class="mt-auto grid grid-cols-2 gap-3">
+                                                        <button class="suggestion-switch-btn bg-slate-800 text-white text-[10px] font-extrabold py-3 rounded-2xl shadow-md hover:bg-slate-900 transition-all" data-term="${escapeHtml(s.refined_term)}">Replace Current</button>
+                                                        <button class="suggestion-adapt-btn bg-teal-600 text-white text-[10px] font-extrabold py-3 rounded-2xl shadow-md hover:bg-teal-700 transition-all" data-term="${escapeHtml(s.refined_term)}">Add as Option</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    ${suggestions.length > 1 ? `
+                                    <div class="flex justify-between items-center mt-2 px-2">
+                                        <button class="carousel-prev text-slate-400 hover:text-teal-600 transition-colors p-2" data-component="${key}"><i class="fa-solid fa-chevron-left"></i></button>
+                                        <div class="flex gap-1.5">
+                                            ${suggestions.map((_, dotIdx) => `<span class="carousel-dot w-1.5 h-1.5 rounded-full ${dotIdx === 0 ? 'bg-teal-600' : 'bg-slate-200'} transition-colors"></span>`).join('')}
+                                        </div>
+                                        <button class="carousel-next text-slate-400 hover:text-teal-600 transition-colors p-2" data-component="${key}"><i class="fa-solid fa-chevron-right"></i></button>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                                ` : `<p class="text-xs text-slate-400 font-bold text-center italic py-4">No suggestions.</p>`)
+                            }
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
         </div>
       </div>
     `;
 
     footerContainer.innerHTML = `
-        <div class="bg-white p-10 rounded-[2rem] border shadow-sm flex flex-col md:flex-row justify-end items-center gap-6">
-           <button id="finalise-btn" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-xl transition-all">Review Protocol &raquo;</button>
+        <div class="bg-white p-10 rounded-[3.5rem] border shadow-sm flex flex-col md:flex-row justify-between items-center gap-8">
+           <div class="text-left w-full md:w-auto">
+              <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Audit Status</p>
+              <p class="text-base font-extrabold text-slate-800">Verification Complete</p>
+           </div>
+           <button id="finalise-btn" class="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white px-12 py-5 rounded-3xl font-extrabold uppercase tracking-widest text-[11px] shadow-2xl transition-all">Review Final Protocol &raquo;</button>
         </div>
     `;
 
-    dashboardContainer.querySelectorAll('.peco-dashboard-card').forEach(card => {
-      const key = card.dataset.key;
-      card.querySelector('.edit-peco-btn').onclick = () => {
-        card.classList.toggle('is-editing');
-        const textarea = card.querySelector('.peco-edit-mode textarea');
-        if (textarea) textarea.focus();
-      };
-      card.querySelector('.save-peco-btn').onclick = async (e) => {
-        const btn = e.target;
-        btn.disabled = true;
-        btn.innerHTML = '<div class="loader w-3 h-3 border-2 inline-block"></div> SYNCING...';
-        
-        const val = card.querySelector('textarea').value;
-        appState.authorWorkflow.liveCoAuthorData.peco[key] = val;
-        
-        try {
-            const synth = await GeminiAPI.callPecoSynthesizerAPI(appState.authorWorkflow.liveCoAuthorData.peco);
-            appState.authorWorkflow.clarityData.researchQuestion = synth.semantic_statement;
-            await runAnalysis(appState.authorWorkflow.liveCoAuthorData.peco);
-        } catch(err) {
-            ToastService.show("Failed to sync: " + err.message, "error");
-            btn.disabled = false;
-            btn.innerHTML = 'Sync and Re-Analyse';
-        }
-      };
+    const finaliseBtn = footerContainer.querySelector('#finalise-btn');
+    if (finaliseBtn) finaliseBtn.onclick = () => jumpToStep('step-peco-workshop');
+
+    const syncAllBtn = dashboardContainer.querySelector('#sync-all-btn');
+    if (syncAllBtn) syncAllBtn.onclick = syncAllProtocol;
+
+    const refreshAuditBtn = dashboardContainer.querySelector('#refresh-audit-btn');
+    if (refreshAuditBtn) refreshAuditBtn.onclick = () => runAnalysis(true);
+
+    dashboardContainer.querySelectorAll('.carousel-prev').forEach(btn => {
+        btn.onclick = () => {
+            const comp = btn.dataset.component;
+            const carousel = dashboardContainer.querySelector(`.suggestion-carousel[data-component="${comp}"]`);
+            const slides = carousel.querySelectorAll('.suggestion-slide');
+            let activeIdx = Array.from(slides).findIndex(s => s.classList.contains('active'));
+            slides[activeIdx].classList.remove('active');
+            activeIdx = (activeIdx - 1 + slides.length) % slides.length;
+            slides[activeIdx].classList.add('active');
+            const dots = carousel.querySelectorAll('.carousel-dot');
+            dots.forEach((d, i) => {
+                d.classList.toggle('bg-teal-600', i === activeIdx);
+                d.classList.toggle('bg-slate-200', i !== activeIdx);
+            });
+        };
     });
 
-    dashboardContainer.querySelector('#toggle-dashboard-btn').onclick = () => {
+    dashboardContainer.querySelectorAll('.carousel-next').forEach(btn => {
+        btn.onclick = () => {
+            const comp = btn.dataset.component;
+            const carousel = dashboardContainer.querySelector(`.suggestion-carousel[data-component="${comp}"]`);
+            const slides = carousel.querySelectorAll('.suggestion-slide');
+            let activeIdx = Array.from(slides).findIndex(s => s.classList.contains('active'));
+            slides[activeIdx].classList.remove('active');
+            activeIdx = (activeIdx + 1) % slides.length;
+            slides[activeIdx].classList.add('active');
+            const dots = carousel.querySelectorAll('.carousel-dot');
+            dots.forEach((d, i) => {
+                d.classList.toggle('bg-teal-600', i === activeIdx);
+                d.classList.toggle('bg-slate-200', i !== activeIdx);
+            });
+        };
+    });
+
+    dashboardContainer.querySelectorAll('.peco-dashboard-card').forEach(card => {
+      const key = card.dataset.key;
+      const editToggle = card.querySelector('.edit-peco-toggle-btn');
+      const freezeBtn = card.querySelector('.freeze-component-btn');
+      const editMode = card.querySelector('.peco-edit-mode');
+      const displayMode = card.querySelector('.peco-display-mode');
+      const pillContainer = card.querySelector('.peco-pill-container');
+      const manualInput = card.querySelector('.pill-manual-input');
+      const addManualBtn = card.querySelector('.add-manual-pill-btn');
+      const saveBtn = card.querySelector('.save-peco-btn');
+
+      let currentVal = peco[key] || '';
+
+      const syncStateAndUI = () => {
+        appState.authorWorkflow.liveCoAuthorData.peco[key] = currentVal;
+        displayMode.innerHTML = formatPecoForDisplay(currentVal, false);
+        pillContainer.innerHTML = formatPecoForDisplay(currentVal, true);
+      };
+
+      if (freezeBtn) {
+          freezeBtn.onclick = () => {
+              const currentState = appState.authorWorkflow.clarityData.frozenComponents[key];
+              appState.authorWorkflow.clarityData.frozenComponents[key] = !currentState;
+              renderResults(); // Re-render to update UI state
+              if (!currentState) {
+                  ToastService.show(`${PECO_MAP[key].label} component locked. Suggestions paused.`, 'success');
+              }
+          };
+      }
+
+      if (editToggle) {
+          editToggle.onclick = (e) => {
+              e.stopPropagation();
+              const isNowEditing = card.classList.toggle('is-editing');
+              editMode.style.display = isNowEditing ? 'block' : 'none';
+              displayMode.style.display = isNowEditing ? 'none' : 'block';
+              editToggle.innerHTML = isNowEditing ? 'View' : 'Edit';
+          };
+      }
+
+      if (addManualBtn && manualInput) {
+          addManualBtn.onclick = () => {
+              let val = manualInput.value.trim();
+              if (val) {
+                  currentVal = currentVal ? `${currentVal} & ${val}` : val;
+                  manualInput.value = '';
+                  syncStateAndUI();
+              }
+          };
+      }
+
+      card.querySelectorAll('.suggestion-switch-btn').forEach(btn => {
+          btn.onclick = () => { currentVal = btn.dataset.term; syncStateAndUI(); };
+      });
+
+      card.querySelectorAll('.suggestion-adapt-btn').forEach(btn => {
+          btn.onclick = () => { currentVal = smartAdaptTerm(currentVal, btn.dataset.term); syncStateAndUI(); };
+      });
+
+      if (saveBtn) {
+          saveBtn.onclick = () => {
+              appState.authorWorkflow.liveCoAuthorData.peco[key] = currentVal;
+              editToggle.click(); 
+          };
+      }
+    });
+
+    dashboardContainer.querySelector('#toggle-gauge-btn').onclick = () => {
       appState.authorWorkflow.clarityData.isAnalysisCollapsed = !appState.authorWorkflow.clarityData.isAnalysisCollapsed;
       renderResults();
-    };
-    footerContainer.querySelector('#finalise-btn').onclick = () => {
-       initPecoWorkshopView(document.getElementById('step-peco-workshop').querySelector('.step-content'));
-       jumpToStep('step-peco-workshop');
     };
   };
 
   scoreBtn.onclick = () => runAnalysis();
-
-  if (autoRun || appState.authorWorkflow.clarityData.analysis) {
-    if (appState.authorWorkflow.clarityData.analysis) renderResults();
-    else runAnalysis();
-  } else {
-      dashboardContainer.innerHTML = `<div class="p-12 text-center text-slate-400 bg-white rounded-3xl border border-dashed"><p class="font-bold">Dashboard ready for input.</p><p class="text-xs mt-2">Complete Step 1 to generate analysis.</p></div>`;
-  }
+  if (appState.authorWorkflow.clarityData.analysis) renderResults();
 }
+
+/**
+ * Global Export logic
+ */
+const downloadPecoJson = () => {
+    const pecoSource = appState.authorWorkflow.pecoWorkshopData?.peco || appState.authorWorkflow.liveCoAuthorData.peco || {};
+    const payload = {
+        metadata: {
+            tool: "PECO-Buddy",
+            version: "8.1.3",
+            timestamp: new Date().toISOString(),
+            study_type: appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General'
+        },
+        protocol: {
+            statement: appState.authorWorkflow.clarityData.researchQuestion,
+            peco: pecoSource
+        }
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `peco-protocol-${new Date().getTime()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    ToastService.show("Nanopublication JSON exported.", "success");
+};
+
+/**
+ * Report Modal Generator
+ */
+const showNanopubReportModal = () => {
+    const pecoSource = appState.authorWorkflow.pecoWorkshopData?.peco || appState.authorWorkflow.liveCoAuthorData.peco || {};
+    const q = appState.authorWorkflow.clarityData.researchQuestion;
+    
+    const content = `
+        <div class="modal-body p-8 space-y-8">
+            <div id="report-content-area" class="bg-teal-50 p-6 rounded-2xl border border-teal-100">
+                <h5 class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 mb-4">Final Protocol Statement</h5>
+                <div class="bg-white p-6 rounded-xl border mb-6 shadow-sm">
+                    <p class="text-sm font-bold text-slate-800 leading-relaxed italic">"${q}"</p>
+                </div>
+                
+                <h5 class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 mb-4">Structural Component Table</h5>
+                <table id="report-peco-table" class="w-full text-xs bg-white rounded-xl border border-collapse overflow-hidden shadow-sm">
+                    ${Object.keys(PECO_MAP).map(k => `
+                        <tr class="border-b last:border-0">
+                            <td class="p-4 font-extrabold uppercase text-teal-700 w-1/3 bg-slate-50/50">${PECO_MAP[k].label}</td>
+                            <td class="p-4 text-slate-800 font-bold">${styleMatrices(pecoSource[k] || 'N/A', 'display')}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+            </div>
+            
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Metadata & Verification Trace</h5>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 border rounded-xl bg-slate-50">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase">Engine</p>
+                        <p class="text-xs font-bold text-slate-700">PECO-Buddy 8.1.3</p>
+                    </div>
+                    <div class="p-4 border rounded-xl bg-slate-50">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase">Timestamp</p>
+                        <p class="text-xs font-bold text-slate-700">${new Date().toLocaleString('en-GB')}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    showModal('Final Transparency Report & Exports', content, null, (modal, close) => {
+        const container = modal.querySelector('.modal-container, .report-modal-container');
+        const footer = document.createElement('div');
+        footer.className = 'modal-footer p-6 border-t flex flex-wrap justify-between items-center gap-4 bg-slate-50';
+        footer.innerHTML = `
+            <div class="flex gap-2">
+                <button id="modal-copy-btn" class="bg-teal-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg border-none cursor-pointer hover:bg-teal-700 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-copy"></i> Copy Table
+                </button>
+                <button id="modal-json-btn" class="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg border-none cursor-pointer hover:bg-slate-900 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-file-code"></i> Export JSON
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button id="modal-pdf-btn" class="bg-white border border-slate-200 text-slate-600 px-6 py-3 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-slate-100 transition-all border-none cursor-pointer">
+                    <i class="fa-solid fa-file-pdf mr-1"></i> Save PDF
+                </button>
+                <button class="bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-slate-300 border-none cursor-pointer close-trigger">Close</button>
+            </div>
+        `;
+        
+        footer.querySelector('.close-trigger').onclick = close;
+        footer.querySelector('#modal-copy-btn').onclick = () => copyTableToClipboard('#report-peco-table');
+        footer.querySelector('#modal-json-btn').onclick = () => downloadPecoJson();
+        footer.querySelector('#modal-pdf-btn').onclick = () => ToastService.show("Preparing document for download...", "info");
+        
+        container.appendChild(footer);
+    }, true);
+};
 
 function initPecoWorkshopView(container) {
   if (!container) return;
-  const peco = appState.authorWorkflow.liveCoAuthorData.peco;
+  const pecoSource = appState.authorWorkflow.pecoWorkshopData?.peco || appState.authorWorkflow.liveCoAuthorData.peco || {};
   const q = appState.authorWorkflow.clarityData.researchQuestion;
-
   const qDisplay = container.querySelector('#final-question-display');
   const pecoDisplay = container.querySelector('#final-peco-display');
-  const saveBtn = container.querySelector('#save-to-notebook-btn');
-  const logBtn = container.querySelector('#show-transparency-log-workshop-btn');
-  const reportBtn = container.querySelector('#view-transparency-report-btn');
-
-  if (qDisplay) qDisplay.innerHTML = q ? `"${renderScientificText(q)}"` : 'No finalised question found yet.';
+  
+  if (qDisplay) qDisplay.innerHTML = q ? `"${styleMatrices(q, 'display')}"` : 'N/A';
   if (pecoDisplay) {
       pecoDisplay.innerHTML = `
-        <table id="peco-final-table" class="w-full text-sm border-collapse rounded-2xl overflow-hidden border border-slate-200">
-          ${Object.keys(PECO_MAP).map(key => `
-            <tr class="border-b border-slate-100 last:border-0">
-              <th class="p-4 bg-slate-50 text-left w-1/4 font-extrabold uppercase text-[10px] tracking-widest text-slate-500">${PECO_MAP[key].label}</th>
-              <td class="p-4 bg-white">${formatPecoForDisplay(peco[key])}</td>
-            </tr>
-          `).join('')}
-        </table>
-      `;
-  }
-
-  if (saveBtn) {
-      saveBtn.onclick = () => {
-          Object.assign(appState.notebookData, {
-              finalQuestion: q,
-              population: peco.population,
-              exposure: peco.exposure,
-              comparison: peco.comparison,
-              outcome: peco.outcome
-          });
-          document.dispatchEvent(new CustomEvent('notebook-save-request'));
-          ToastService.show('Protocol saved to Notebook.', 'success');
-      };
-  }
-
-  if (logBtn) {
-      logBtn.onclick = () => showTransparencyLogModal();
-  }
-
-  if (reportBtn) {
-      reportBtn.onclick = () => renderTransparencyReport();
-  }
-}
-
-function renderTransparencyReport() {
-    const mainContent = document.getElementById('main-content');
-    mainContent.innerHTML = templates.transparencyReportView;
-    
-    const peco = appState.authorWorkflow.liveCoAuthorData.peco;
-    const q = appState.authorWorkflow.clarityData.researchQuestion;
-    const timestamp = new Date().toLocaleString('en-GB');
-    
-    document.getElementById('report-timestamp').textContent = timestamp;
-    document.getElementById('report-final-question').innerHTML = `"${renderScientificText(q)}"`;
-    
-    const tableWrapper = document.getElementById('report-peco-table-wrapper');
-    tableWrapper.innerHTML = `
-        <table id="report-peco-table" class="w-full text-sm border-collapse">
+        <table class="w-full text-sm border-collapse rounded-[2rem] overflow-hidden border shadow-sm">
             ${Object.keys(PECO_MAP).map(key => `
                 <tr class="border-b last:border-0">
-                    <th class="p-4 bg-slate-50 text-left w-1/4 font-extrabold uppercase text-[9px] tracking-widest text-slate-500">${PECO_MAP[key].label}</th>
-                    <td class="p-4 bg-white">${formatPecoForDisplay(peco[key])}</td>
+                    <th class="p-6 bg-slate-50 text-left w-1/4 font-extrabold uppercase text-[10px] tracking-widest text-slate-400">${PECO_MAP[key].label}</th>
+                    <td class="p-6 bg-white font-bold text-slate-800 text-lg">${styleMatrices(pecoSource[key] || '', 'display')}</td>
                 </tr>
             `).join('')}
-        </table>
-    `;
+        </table>`;
+  }
 
-    const logSummaryContainer = document.getElementById('report-log-entries');
-    if (appState.authorWorkflow.clarityData.analysis) {
-        logSummaryContainer.innerHTML = `
-            <div class="text-[10px] p-2 bg-white border rounded-xl">
-                <span class="font-bold text-teal-600 mr-2">LOGIC AUDIT:</span> Found ${appState.authorWorkflow.clarityData.analysis.missing_components.length} omissions and ${appState.authorWorkflow.clarityData.analysis.ambiguities.length} conceptual ambiguities.
-            </div>
-            <div class="text-[10px] p-2 bg-white border rounded-xl">
-                <span class="font-bold text-teal-600 mr-2">SEMANTIC SYNC:</span> Synchronised ${appState.interactionLog.length} interaction blocks for scientific reproducibility.
-            </div>
-        `;
-    }
+  const reportBtn = container.querySelector('#view-transparency-report-btn');
+  if (reportBtn) reportBtn.onclick = () => showNanopubReportModal();
 
-    const reportLogBtn = document.getElementById('report-show-log-btn');
-    if (reportLogBtn) {
-        reportLogBtn.onclick = () => showTransparencyLogModal();
-    }
-
-    document.getElementById('report-copy-table-btn').onclick = () => copyTableToClipboard('#report-peco-table');
-    
-    document.getElementById('report-export-nanopub-btn').onclick = () => {
-        const nanopub = {
-            "@context": "http://nanopub.org/ns/context.jsonld",
-            "assertion": {
-                "researchQuestion": q,
-                "components": peco,
-                "studyType": appState.authorWorkflow.ideationData.selectedStudyType?.name
-            },
-            "provenance": {
-                "generatedBy": "PECO-Buddy v8.1 Beta",
-                "timestamp": timestamp,
-                "author": "EBTC Researcher"
-            }
-        };
-        const blob = new Blob([JSON.stringify(nanopub, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'peco-nanopub.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        ToastService.show('Nano-publication exported!', 'success');
-    };
+  const traceBtn = container.querySelector('#show-transparency-log-workshop-btn');
+  if (traceBtn) traceBtn.onclick = () => showTransparencyLogModal();
 }

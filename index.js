@@ -1,4 +1,3 @@
-
 import { appState, dom } from './state.js';
 import { MODE_CONFIG } from './config.js';
 import { templates } from './views/templates.js';
@@ -7,7 +6,6 @@ import { showModal } from './components/modal.js';
 import { initAuthorToolkitFlow } from './views/pecoToolkit.js';
 import { initReviewerToolkitView } from './views/reviewPeco.js';
 import { initNlpToolkitView } from './views/nlpToolkit.js';
-import { initNotebookListeners, loadNotebookData, updateNotebookUI } from './views/notebook.js';
 
 /**
  * Main application entry point for PECO-Buddy.
@@ -17,27 +15,23 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         const getEl = (id) => document.getElementById(id);
 
+        // Assign core DOM references
         dom.mainContent = getEl('main-content');
-        dom.saveProjectBtn = getEl('save-project-btn');
-        dom.loadProjectBtn = getEl('load-project-btn');
-        dom.loadProjectInput = getEl('load-project-input');
         dom.modalPlaceholder = getEl('modal-placeholder');
         dom.sidebarNav = getEl('sidebar-nav');
         dom.headerTitle = getEl('header-title');
         dom.headerSubtitle = getEl('header-subtitle');
         dom.appSidebar = getEl('app-sidebar');
         dom.appMainContent = getEl('app-main-content');
-        dom.sidebarToggleBtn = getEl('sidebar-toggle-btn');
-        const toggleTooltipsBtn = getEl('toggle-tooltips-btn');
-        const globalTooltip = getEl('global-tooltip');
 
-        // Load saved heuristics if available
-        const savedHeuristics = localStorage.getItem('PECO_BUDDY_HEURISTICS');
-        if (savedHeuristics) {
-            try {
-                appState.heuristics = JSON.parse(savedHeuristics);
-            } catch (e) { console.error("Failed to parse heuristics", e); }
-        }
+        // Initial Typography Sync
+        const applyFontSize = (size) => {
+            document.body.classList.remove('font-size-sm', 'font-size-md', 'font-size-lg');
+            document.body.classList.add(`font-size-${size}`);
+            appState.fontSize = size;
+            localStorage.setItem('peco_buddy_font_size', size);
+        };
+        applyFontSize(appState.fontSize);
 
         const renderToolkitView = () => {
             if (!dom.mainContent) return;
@@ -75,74 +69,118 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showSettings = () => {
-            showModal('Settings & Analysis Engine', `<div class="modal-body p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">${templates.settingsView}</div>`, (modal) => {
+            showModal('Settings & Analysis Engine', `<div class="modal-body p-6">${templates.settingsView}</div>`, (modal) => {
                 const aiBtn = modal.querySelector('#modal-engine-ai-btn');
                 const nlpBtn = modal.querySelector('#modal-engine-nlp-btn');
-                const connectKeyBtn = modal.querySelector('#modal-connect-key-btn');
-                const gaugeToggle = modal.querySelector('#modal-toggle-gauge-btn');
-                const manualKeyInput = modal.querySelector('#modal-manual-key-input');
-                const saveKeyBtn = modal.querySelector('#save-manual-key-btn');
-                const toggleKeyVisBtn = modal.querySelector('#toggle-key-visibility');
                 
+                // Provider Configuration
+                const providerSelect = modal.querySelector('#settings-provider-select');
+                const fieldsGemini = modal.querySelector('#field-group-gemini');
+                const fieldsCustom = modal.querySelector('#field-group-custom');
+                const inputGeminiKey = modal.querySelector('#input-gemini-key');
+                const inputCustomUrl = modal.querySelector('#input-custom-url');
+                const inputCustomModel = modal.querySelector('#input-custom-model');
+                const inputCustomKey = modal.querySelector('#input-custom-key');
+                const saveConfigBtn = modal.querySelector('#save-provider-config-btn');
+                const resetConfigBtn = modal.querySelector('#reset-provider-config-btn');
+                const statusDisplay = modal.querySelector('#provider-status-display');
+                
+                // Assistance Level Slider
+                const assistSlider = modal.querySelector('#settings-assistance-slider');
+                const assistDisplay = modal.querySelector('#assistance-level-display');
+
+                // Seed Control
+                const seedSlider = modal.querySelector('#settings-seed-slider');
+                const seedDisplay = modal.querySelector('#settings-seed-display');
                 const seedInput = modal.querySelector('#settings-seed-input');
-                const seedRange = modal.querySelector('#settings-seed-range');
-                const domainInput = modal.querySelector('#settings-domain-context');
-                const logicInput = modal.querySelector('#settings-logic-anchors');
-                const resetHeuristicsBtn = modal.querySelector('#settings-reset-heuristics');
 
-                // Initialize Domain Adaptation Inputs
-                if (domainInput) domainInput.value = appState.heuristics.domainContext;
-                if (logicInput) logicInput.value = appState.heuristics.logicAnchors;
-                const currentSeed = appState.heuristics.baseSeed || 42;
-                if (seedInput) seedInput.value = currentSeed;
-                if (seedRange) seedRange.value = currentSeed;
-
-                // Sync Range and Input
-                if (seedInput && seedRange) {
-                    seedRange.addEventListener('input', (e) => {
-                        seedInput.value = e.target.value;
-                    });
-                    seedInput.addEventListener('input', (e) => {
-                        seedRange.value = e.target.value;
-                    });
-                }
-
-                if (resetHeuristicsBtn) {
-                    resetHeuristicsBtn.onclick = () => {
-                        domainInput.value = "Toxicology and Epidemiology";
-                        logicInput.value = "- Human + Prenatal/Birth -> Use 'Infants' or 'Children'.\n- Rodent + Prenatal/Birth -> Use 'Pups'.\n- Human + Pregnancy -> Use 'Pregnant Women'.\n- Zebrafish + Early Stage -> Use 'Larvae' or 'Embryos'.";
-                        if(seedInput) seedInput.value = 42;
-                        if(seedRange) seedRange.value = 42;
-                        ToastService.show("Heuristics reset to default. Click Done to save.", "info");
-                    };
-                }
-
-                // Initialize manual key from storage
-                if (manualKeyInput) {
-                    manualKeyInput.value = window.localStorage.getItem('PECO_BUDDY_CUSTOM_KEY') || '';
-                }
-
-                if (saveKeyBtn && manualKeyInput) {
-                    saveKeyBtn.onclick = () => {
-                        const key = manualKeyInput.value.trim();
-                        window.localStorage.setItem('PECO_BUDDY_CUSTOM_KEY', key);
-                        if (key) {
-                            ToastService.show("Manual API Key saved successfully to local storage.", "success");
-                            saveKeyBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Saved';
-                            setTimeout(() => { saveKeyBtn.innerText = 'Save Key'; }, 2000);
-                        } else {
-                            ToastService.show("Manual key cleared.", "info");
+                if (seedSlider && seedDisplay && seedInput) {
+                    const updateSeed = (val) => {
+                        const num = parseInt(val, 10);
+                        if (!isNaN(num)) {
+                            appState.globalSeed = num;
+                            seedSlider.value = num;
+                            seedInput.value = num;
+                            seedDisplay.textContent = num;
+                            localStorage.setItem('peco_buddy_seed', num);
                         }
                     };
-                }
 
-                if (toggleKeyVisBtn && manualKeyInput) {
-                    toggleKeyVisBtn.onclick = () => {
-                        const isPass = manualKeyInput.type === 'password';
-                        manualKeyInput.type = isPass ? 'text' : 'password';
-                        toggleKeyVisBtn.innerHTML = isPass ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+                    updateSeed(appState.globalSeed);
+
+                    seedSlider.oninput = (e) => updateSeed(e.target.value);
+                    seedInput.oninput = (e) => updateSeed(e.target.value);
+                }
+                
+                if (assistSlider && assistDisplay) {
+                    assistSlider.value = appState.assistanceLevel;
+                    const updateLabel = (val) => {
+                        const v = parseInt(val);
+                        if (v === 1) assistDisplay.textContent = "Minimal (1/5)";
+                        else if (v === 2) assistDisplay.textContent = "Light (2/5)";
+                        else if (v === 3) assistDisplay.textContent = "Standard (3/5)";
+                        else if (v === 4) assistDisplay.textContent = "Detailed (4/5)";
+                        else if (v === 5) assistDisplay.textContent = "Intense (5/5)";
+                    };
+                    updateLabel(appState.assistanceLevel);
+                    
+                    assistSlider.oninput = (e) => updateLabel(e.target.value);
+                    assistSlider.onchange = (e) => {
+                        appState.assistanceLevel = parseInt(e.target.value);
+                        localStorage.setItem('peco_buddy_assistance_level', e.target.value);
                     };
                 }
+
+                // Tabs
+                const tabs = modal.querySelectorAll('.settings-tab-btn');
+                const contents = modal.querySelectorAll('.settings-tab-content');
+                tabs.forEach(tab => {
+                    tab.onclick = (e) => {
+                        e.preventDefault();
+                        tabs.forEach(t => {
+                            t.classList.remove('active', 'border-teal-600', 'text-teal-600');
+                            t.classList.add('text-slate-500');
+                        });
+                        tab.classList.add('active', 'border-b-2', 'border-teal-600', 'text-teal-600');
+                        tab.classList.remove('text-slate-500');
+                        contents.forEach(c => c.classList.add('hidden'));
+                        modal.querySelector(`#settings-tab-${tab.dataset.tab}`).classList.remove('hidden');
+                    };
+                });
+                if(tabs.length > 0) tabs[0].click(); 
+
+                // Heuristics Editor
+                const hComp = modal.querySelector('#heuristic-comparator');
+                const hExp = modal.querySelector('#heuristic-exposure');
+                const hPop = modal.querySelector('#heuristic-population');
+                const hOut = modal.querySelector('#heuristic-outcome');
+                const saveHBtn = modal.querySelector('#save-heuristics-btn');
+
+                if (hComp) hComp.value = appState.heuristics.comparator;
+                if (hExp) hExp.value = appState.heuristics.exposure;
+                if (hPop) hPop.value = appState.heuristics.population;
+                if (hOut) hOut.value = appState.heuristics.outcome;
+
+                if (saveHBtn) {
+                    saveHBtn.onclick = () => {
+                        appState.heuristics.comparator = hComp.value;
+                        appState.heuristics.exposure = hExp.value;
+                        appState.heuristics.population = hPop.value;
+                        appState.heuristics.outcome = hOut.value;
+                        ToastService.show('Applied heuristics updated and encoded.', 'success');
+                    };
+                }
+
+                // Font Size Toggles
+                const fsBtns = modal.querySelectorAll('.font-size-btn');
+                fsBtns.forEach(btn => {
+                    if (btn.dataset.size === appState.fontSize) btn.classList.add('active');
+                    btn.onclick = () => {
+                        fsBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        applyFontSize(btn.dataset.size);
+                    };
+                });
 
                 const updateSelection = () => {
                     if (aiBtn) {
@@ -158,159 +196,170 @@ document.addEventListener('DOMContentLoaded', () => {
                     const nlpCheck = nlpBtn?.querySelector('.active-check');
                     if (aiCheck) aiCheck.style.opacity = appState.analysisEngine === 'ai' ? '1' : '0';
                     if (nlpCheck) nlpCheck.style.opacity = appState.analysisEngine === 'nlp' ? '1' : '0';
-                    
-                    if (gaugeToggle) gaugeToggle.checked = appState.showScoreGauge;
                 };
 
-                if (aiBtn) aiBtn.onclick = () => { appState.analysisEngine = 'ai'; updateSelection(); };
-                if (nlpBtn) nlpBtn.onclick = () => { appState.analysisEngine = 'nlp'; updateSelection(); };
-                if (gaugeToggle) gaugeToggle.onchange = (e) => { appState.showScoreGauge = e.target.checked; };
-                
-                if (connectKeyBtn) {
-                    connectKeyBtn.onclick = async () => {
-                        try {
-                            if (window.aistudio && window.aistudio.openSelectKey) {
-                                await window.aistudio.openSelectKey();
-                                ToastService.show("API Studio connection triggered.", "success");
-                            } else {
-                                ToastService.show("AI Studio key manager not found.", "error");
+                // Provider Config Logic
+                const initProviderUI = () => {
+                    providerSelect.value = appState.aiProvider || 'gemini';
+                    inputGeminiKey.value = appState.globalApiKey || '';
+                    inputCustomUrl.value = appState.aiBaseUrl || '';
+                    inputCustomModel.value = appState.aiModel || '';
+                    inputCustomKey.value = appState.globalApiKey || ''; // Reuse global key storage
+
+                    const updateVisibility = () => {
+                        const isGemini = providerSelect.value === 'gemini';
+                        fieldsGemini.classList.toggle('hidden', !isGemini);
+                        fieldsCustom.classList.toggle('hidden', isGemini);
+                        
+                        // Prefill defaults if empty when switching
+                        if (!isGemini && !inputCustomUrl.value) {
+                             if (providerSelect.value === 'local') inputCustomUrl.value = 'http://localhost:11434/v1';
+                             if (providerSelect.value === 'openai') inputCustomUrl.value = 'https://api.openai.com/v1';
+                        }
+                    };
+                    providerSelect.onchange = updateVisibility;
+                    updateVisibility();
+                };
+
+                if (saveConfigBtn) {
+                    saveConfigBtn.onclick = () => {
+                        const provider = providerSelect.value;
+                        appState.aiProvider = provider;
+                        localStorage.setItem('peco_buddy_ai_provider', provider);
+                        
+                        if (provider === 'gemini') {
+                            const key = inputGeminiKey.value.trim();
+                            if (key) {
+                                appState.globalApiKey = key;
+                                localStorage.setItem('peco_buddy_api_key', key);
                             }
-                        } catch (e) {
-                            ToastService.show(`Error: ${e.message}`, "error");
+                        } else {
+                            const url = inputCustomUrl.value.trim();
+                            const model = inputCustomModel.value.trim();
+                            const key = inputCustomKey.value.trim();
+                            
+                            appState.aiBaseUrl = url;
+                            appState.aiModel = model;
+                            appState.globalApiKey = key; // Save custom key in same global var
+                            
+                            localStorage.setItem('peco_buddy_ai_base_url', url);
+                            localStorage.setItem('peco_buddy_ai_model', model);
+                            if(key) localStorage.setItem('peco_buddy_api_key', key);
+                        }
+                        
+                        ToastService.show('AI Configuration Saved', 'success');
+                        if (statusDisplay) {
+                            statusDisplay.classList.remove('hidden');
+                            setTimeout(() => statusDisplay.classList.add('hidden'), 3000);
                         }
                     };
                 }
 
+                if (resetConfigBtn) {
+                    resetConfigBtn.onclick = () => {
+                        if (confirm('Reset all AI configuration to default?')) {
+                            localStorage.removeItem('peco_buddy_ai_provider');
+                            localStorage.removeItem('peco_buddy_ai_base_url');
+                            localStorage.removeItem('peco_buddy_ai_model');
+                            localStorage.removeItem('peco_buddy_api_key');
+                            
+                            appState.aiProvider = 'gemini';
+                            appState.aiBaseUrl = '';
+                            appState.aiModel = '';
+                            appState.globalApiKey = '';
+                            
+                            initProviderUI();
+                            ToastService.show('Configuration Reset', 'info');
+                        }
+                    };
+                }
+
+                if (aiBtn) aiBtn.onclick = () => { appState.analysisEngine = 'ai'; updateSelection(); };
+                if (nlpBtn) nlpBtn.onclick = () => { appState.analysisEngine = 'nlp'; updateSelection(); };
+
+                initProviderUI();
                 updateSelection();
             }, (modal, close) => {
-                const container = modal.querySelector('.modal-container, .report-modal-container');
-                const foot = container.appendChild(document.createElement('div'));
-                foot.className = 'modal-footer p-4 border-t flex justify-end';
-                foot.innerHTML = `<button class="bg-teal-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Done</button>`;
-                foot.onclick = () => {
-                    // One final check to save if they entered something but didn't hit save button
-                    const input = modal.querySelector('#modal-manual-key-input');
-                    if (input) {
-                        window.localStorage.setItem('PECO_BUDDY_CUSTOM_KEY', input.value.trim());
-                    }
-
-                    // Save Heuristics
-                    const domainInput = modal.querySelector('#settings-domain-context');
-                    const logicInput = modal.querySelector('#settings-logic-anchors');
-                    const seedInput = modal.querySelector('#settings-seed-input');
-                    
-                    if (domainInput && logicInput && seedInput) {
-                        appState.heuristics = {
-                            domainContext: domainInput.value.trim(),
-                            logicAnchors: logicInput.value.trim(),
-                            baseSeed: parseInt(seedInput.value) || 42
-                        };
-                        localStorage.setItem('PECO_BUDDY_HEURISTICS', JSON.stringify(appState.heuristics));
-                    }
-
+                const container = modal.querySelector('.modal-container');
+                const newFoot = document.createElement('div');
+                newFoot.className = 'modal-footer p-4 border-t flex justify-end';
+                newFoot.innerHTML = `<button class="bg-teal-600 text-white px-10 py-3 rounded-2xl font-extrabold uppercase text-[11px] tracking-widest shadow-lg hover:bg-teal-700 transition-all border-none">Done</button>`;
+                newFoot.querySelector('button').onclick = () => {
                     close();
-                    if (appState.currentMode === 'peco_toolkit') {
-                        renderToolkitView();
-                    }
+                    if (appState.currentMode === 'peco_toolkit') renderToolkitView();
                 };
+                container.appendChild(newFoot);
             });
         };
 
         const showUserManual = () => {
-            showModal('User Manual v8.1.1 Beta', `<div class="modal-body p-6">${templates.userManualView}</div>`, (modal) => {
+            showModal('User Manual v8.2 Beta', `<div class="modal-body p-6">${templates.userManualView}</div>`, (modal) => {
                 const searchInput = modal.querySelector('#manual-search-input');
-                const contentContainer = modal.querySelector('#manual-content-container');
                 const sections = modal.querySelectorAll('.manual-section');
-                const navLinks = modal.querySelectorAll('.manual-nav-link');
-                
-                navLinks.forEach(link => {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const targetId = link.getAttribute('href').substring(1);
-                        const targetSection = modal.querySelector(`#${targetId}`);
-                        
-                        navLinks.forEach(l => l.classList.remove('active'));
-                        link.classList.add('active');
-
-                        if (targetSection && contentContainer) {
-                            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                    });
-                });
-
                 if (searchInput) {
                     searchInput.addEventListener('input', (e) => {
                         const query = e.target.value.toLowerCase();
                         sections.forEach(section => {
                             const text = section.innerText.toLowerCase();
-                            const matches = text.includes(query);
-                            section.style.display = matches ? 'block' : 'none';
-                            if (query.length > 2 && matches) {
-                                section.classList.add('bg-yellow-50/50');
-                            } else {
-                                section.classList.remove('bg-yellow-50/50');
-                            }
-                        });
-                        navLinks.forEach(link => {
-                            const targetId = link.getAttribute('href').substring(1);
-                            const section = modal.querySelector(`#${targetId}`);
-                            link.style.opacity = (section && section.style.display === 'none') ? '0.3' : '1';
+                            section.style.display = text.includes(query) ? 'block' : 'none';
                         });
                     });
                 }
             }, (modal, close) => {
-                const container = modal.querySelector('.modal-container, .report-modal-container');
-                const foot = container.appendChild(document.createElement('div'));
+                const container = modal.querySelector('.modal-container');
+                const foot = document.createElement('div');
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
-                foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold">Close Manual</button>`;
+                foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-sm border-none cursor-pointer">Close</button>`;
                 foot.onclick = close;
-            }, true);
+                container.appendChild(foot);
+            });
         };
 
         const showRationale = () => {
-            showModal('Version 8.1.1 Rationale', `<div class="modal-body p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">${templates.versionRationaleView}</div>`, null, (modal, close) => {
-                const container = modal.querySelector('.modal-container, .report-modal-container');
-                const foot = container.appendChild(document.createElement('div'));
+            showModal('Scientific Version Rationale', `<div class="modal-body p-6">${templates.versionRationaleView}</div>`, null, (modal, close) => {
+                const container = modal.querySelector('.modal-container');
+                const foot = document.createElement('div');
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
-                foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold">Close</button>`;
+                foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-sm border-none cursor-pointer">Close</button>`;
                 foot.onclick = close;
+                container.appendChild(foot);
             });
         };
 
         const showCopyright = () => {
-            showModal('Legal Notice', `<div class="modal-body p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">${templates.copyrightView}</div>`, null, (modal, close) => {
-                const container = modal.querySelector('.modal-container, .report-modal-container');
-                const foot = container.appendChild(document.createElement('div'));
+            showModal('Legal Notice & IP', `<div class="modal-body p-6">${templates.copyrightView}</div>`, null, (modal, close) => {
+                const container = modal.querySelector('.modal-container');
+                const foot = document.createElement('div');
                 foot.className = 'modal-footer p-4 border-t flex justify-end';
-                foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold">Close</button>`;
+                foot.innerHTML = `<button class="bg-slate-200 text-slate-700 px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-sm border-none cursor-pointer">Close</button>`;
                 foot.onclick = close;
+                container.appendChild(foot);
             });
         };
 
+        // Attach sidebar event listeners
         if (dom.appSidebar) {
             dom.appSidebar.addEventListener('click', (e) => {
                 const link = e.target.closest('.sidebar-link');
                 if (!link) return;
+                
                 e.preventDefault();
-
-                if (link.dataset.mode) {
-                    setMode(link.dataset.mode);
-                } else if (link.id === 'show-settings-btn') {
-                    showSettings();
-                } else if (link.id === 'show-manual-btn') {
-                    showUserManual();
-                } else if (link.id === 'show-rationale-btn') {
-                    showRationale();
-                } else if (link.id === 'show-copyright-btn') {
-                    showCopyright();
+                const mode = link.dataset.mode;
+                if (mode) {
+                    setMode(mode);
+                } else {
+                    const id = link.id;
+                    if (id === 'show-settings-btn') showSettings();
+                    else if (id === 'show-manual-btn') showUserManual();
+                    else if (id === 'show-rationale-btn') showRationale();
+                    else if (id === 'show-copyright-btn') showCopyright();
                 }
             });
         }
 
-        loadNotebookData();
-        updateNotebookUI();
-        initNotebookListeners();
+        // Initial render
         setMode('peco_toolkit');
+
     } catch (e) {
         console.error("Initialization Error:", e);
     }

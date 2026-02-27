@@ -1,14 +1,17 @@
-
 export const appState = {
     currentMode: 'peco_toolkit',
     analysisEngine: 'ai', // 'ai' or 'nlp'
     showTooltips: true,
-    showScoreGauge: true,
-    heuristics: {
-        domainContext: "Toxicology and Epidemiology",
-        logicAnchors: "- Human + Prenatal/Birth -> Use 'Infants' or 'Children'.\n- Rodent + Prenatal/Birth -> Use 'Pups'.\n- Human + Pregnancy -> Use 'Pregnant Women'.\n- Zebrafish + Early Stage -> Use 'Larvae' or 'Embryos'.",
-        baseSeed: 42
-    },
+    fontSize: localStorage.getItem('peco_buddy_font_size') || 'md', // sm, md, lg
+    assistanceLevel: parseInt(localStorage.getItem('peco_buddy_assistance_level') || '3'), // 1 (Min) to 5 (Max)
+    globalSeed: parseInt(localStorage.getItem('peco_buddy_seed') || '42'),
+    
+    // AI Provider Configuration
+    aiProvider: localStorage.getItem('peco_buddy_ai_provider') || 'gemini', // 'gemini', 'openai', 'local'
+    aiBaseUrl: localStorage.getItem('peco_buddy_ai_base_url') || '',
+    aiModel: localStorage.getItem('peco_buddy_ai_model') || '',
+    globalApiKey: localStorage.getItem('peco_buddy_api_key') || '', 
+
     authorWorkflow: {
         currentStep: 'step-ideation',
         completedSteps: [],
@@ -17,9 +20,23 @@ export const appState = {
             selectedStudyType: null, 
             generatedSuggestions: [], 
             selectedSuggestion: null,
-            generationCount: 0 // Track for deterministic seed +1 logic
+            generationCount: 0 
         },
-        clarityData: { researchQuestion: '', qualityScore: 0, analysis: null, peco: null, strengths: [], appliedSuggestions: {}, isAnalysisCollapsed: false },
+        clarityData: { 
+            researchQuestion: '', 
+            analysis: null, 
+            peco: null, 
+            strengths: [], 
+            appliedSuggestions: {}, 
+            isAnalysisCollapsed: false, 
+            analysisDepth: 'intermediate', // 'quick', 'intermediate', 'thorough'
+            frozenComponents: {
+                population: false,
+                exposure: false,
+                comparison: false,
+                outcome: false
+            }
+        },
         liveCoAuthorData: { peco: { population: '', exposure: '', comparison: '', outcome: '' }, ambiguities: [] },
         pecoWorkshopData: null,
     },
@@ -27,12 +44,15 @@ export const appState = {
     nlpCurrentPage: 1,
     nlpSearchQuery: '',
     nlpSort: { key: 'term', direction: 'asc' },
-    globalApiKey: '', 
-    notebookData: {
-        researchScope: '', initialQuestion: '', finalQuestion: '', 
-        population: '', exposure: '', comparison: '', outcome: '', notes: ''
-    },
-    interactionLog: [], // Complete trail of prompts, contexts, and JSON responses
+    
+    interactionLog: [],
+    // Domain Expertise Heuristics
+    heuristics: {
+        comparator: "Stress the distinction between absolute thresholds (e.g., < 2 µg/dL) and relative controls (e.g., non-exposed group). Absolute values are preferred for regulatory and clinical utility.",
+        exposure: "Identify the specific chemical agent, the matrix/vehicle of delivery, and the route of entry. Use 'via' for pathways.",
+        population: "Explicitly define life-stage, geographic context, and any inherent vulnerability factors (e.g., genetic or socio-economic).",
+        outcome: "Distinguish between apical endpoints (e.g., mortality) and molecular/intermediate biomarkers (e.g., enzyme inhibition)."
+    }
 };
 
 export const dom = {

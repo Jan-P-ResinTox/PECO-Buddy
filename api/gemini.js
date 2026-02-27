@@ -1,66 +1,93 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { appState } from '../state.js';
 import { extractJsonFromString, showError } from '../utils.js';
 
 /**
- * Initialization of the Google GenAI SDK.
+ * Core API Wrapper supporting multi-provider dispatch.
  */
-const getAI = () => {
-  const customKey = window.localStorage.getItem('PECO_BUDDY_CUSTOM_KEY');
-  const apiKey = customKey || process.env.API_KEY;
-  if (!apiKey) throw new Error("API Key required. Please connect in Settings.");
-  return new GoogleGenAI({ apiKey });
+export const callGeminiAPI = async (prompt, schema, statusContainer = null, config = {}) => {
+  // Use settings-defined provider or default to Gemini
+  const provider = appState.aiProvider || 'gemini';
+
+  if (provider === 'gemini') {
+      return await callGoogleGemini(prompt, schema, statusContainer, config);
+  } else {
+      return await callOpenAICompatible(prompt, schema, statusContainer, config);
+  }
 };
 
 /**
- * Core API Wrapper with Deterministic Anchoring
- * seed: 42 - The global scientific constant for this application.
- * temperature: 0.1 - Low variance for high-precision extraction.
+ * Implementation for Google Gemini (Official SDK)
  */
-export const callGeminiAPI = async (prompt, schema, statusContainer = null, config = {}) => {
+async function callGoogleGemini(prompt, schema, statusContainer, config) {
   const modelName = 'gemini-3-flash-preview';
-
-  const systemInstruction = `You are a high-level Linguistic Professor and Domain Expert in ${appState.heuristics.domainContext || 'Toxicology and Epidemiology'}, serving as a scientific co-author for the EBTC.
+  const h = appState.heuristics;
+  const isAudit = config.task === 'audit';
+  const isExtraction = config.task === 'extraction';
+  const isSynthesis = config.task === 'synthesis';
+  const isIdeation = config.task === 'ideation';
   
-  PECO RULES:
-  - Identify Population, Exposure, Comparison, and Outcome.
-  - MATRIX IDENTIFICATION: If a measurement site, biological matrix, or vehicle is mentioned (e.g. cord blood, urine, serum, air, soil), you MUST wrap it in curly braces: {matrix:maternal blood}.
-  - Use '&' for AND, ';' for OR within fields.
-  - NEVER use HTML or CSS in the JSON strings.
+  const heuristicsBlock = (isAudit) ? `
+  APPLIED HEURISTICS (FOR ADVISORY CRITIQUE):
+  - COMPARATOR: ${h.comparator}
+  - EXPOSURE: ${h.exposure}
+  - POPULATION: ${h.population}
+  - OUTCOME: ${h.outcome}
+  
+  ADVISORY TONE: Your tone is that of a world-class, constructive Linguistic Professor and Toxicology expert. Use encouraging but rigorous phrasing.` : '';
+
+  const systemInstruction = `You are a world-class Linguistic Professor and Domain Expert in Toxicology and Epidemiology for the EBTC. Your persona is the PECO-Buddy 8.1.3. Your specialty is ensuring scientific precision through semantic clarity.
+  
+  CRITICAL: LINGUISTIC SYNTAX RULE (MANDATORY)
+  You MUST identify measurement sites, biological matrices, or vehicles and tag them using the {matrix:connector:term} syntax.
+  Connectors: 'in', 'via', 'within', 'across', 'from'.
+  Example: {matrix:in:maternal blood}, {matrix:via:cord blood}, {matrix:within:hepatocytes}.
+  Ensure natural spaces exist BEFORE and AFTER any {matrix:...} tag.
+
+  ${heuristicsBlock}
+
+  TASK CONTEXT:
+  ${isExtraction ? 'You are an Extraction Engine. Extract DISCRETE Minimal Conceptual Units. CRITICAL: Include specific parameters if present.' : ''}
+  ${isAudit ? 'You are an Augmented Intelligence Auditor. Your goal is REDUCING AMBIGUITY. Critique the input.' : ''}
+  ${isSynthesis ? 'Synthesise components into a formal research question. No advisory fluff.' : ''}
+  ${isIdeation ? 'Generate distinct research questions based on scope.' : ''}
   
   OUTPUT:
-  - Return ONLY valid JSON matching the schema.
-  - Use UK English spelling (e.g., 'fetal', 'haemoglobin').`;
-
-  const baseSeed = appState.heuristics.baseSeed || 42;
+  - Return ONLY valid JSON matching the schema if requested.
+  - Use UK English spelling.`;
 
   try {
-    const ai = getAI();
-    const result = await ai.models.generateContent({
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("You must open settings and enter your API-Key to proceed.");
+
+    const ai = new GoogleGenAI({ apiKey });
+    
+    const response = await ai.models.generateContent({
       model: modelName,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      contents: prompt,
       config: {
         systemInstruction,
         responseMimeType: schema ? "application/json" : "text/plain",
         responseSchema: schema || undefined,
-        temperature: 0.1,
-        seed: config.seed || baseSeed,
+        temperature: config.temperature || 0.1,
+        seed: config.seed || 42,
         ...config
       }
     });
 
-    const text = result.text;
-    if (!text) throw new Error("Empty response.");
+    const text = response.text;
+    if (!text) throw new Error("Empty response from the intelligence engine.");
 
     appState.interactionLog.push({
       timestamp: new Date().toISOString(),
+      provider: 'Google Gemini',
       prompt,
       response: text
     });
 
     if (schema) {
       const jsonStr = extractJsonFromString(text);
+      if (!jsonStr) throw new Error("Failed to parse structural response.");
       return JSON.parse(jsonStr);
     }
     return text;
@@ -69,49 +96,103 @@ export const callGeminiAPI = async (prompt, schema, statusContainer = null, conf
     if (statusContainer) showError(statusContainer, error.message);
     throw error;
   }
-};
+}
 
 /**
- * ENHANCED: Context Logic Engine
- * Performs high-level semantic deconstruction and terminology anchoring.
+ * Implementation for OpenAI-Compatible Endpoints (Ollama, LM Studio, OpenAI, etc.)
  */
-export const callContextLogicEngineAPI = async (question) => {
-  const prompt = `Perform a high-level scientific logic deconstruction of this research question: "${question}".
-  
-  Identify:
-  1. The "Unit of Observation": The specific entity whose biology/status is measured for the outcome.
-  2. The "Exposure Vehicle": The route/entity through which the exposure happens (e.g., mother in prenatal studies).
-  3. "Species Context": Identify species (Human, Rat, Mouse, Zebrafish, etc.).
-  4. "Term Anchors": Define the preferred, contextually appropriate term for the Unit of Observation based on Species and Life Stage.
-  
-  DOMAIN LOGIC ANCHORS:
-  ${appState.heuristics.logicAnchors || 'No specific anchors provided.'}
-  
-  Return JSON with "unit_of_observation", "exposure_vehicle", "species_context", "preferred_population_term", "causal_logic".`;
+async function callOpenAICompatible(prompt, schema, statusContainer, config) {
+    const h = appState.heuristics;
+    const isAudit = config.task === 'audit';
+    
+    const baseUrl = appState.aiBaseUrl ? appState.aiBaseUrl.replace(/\/+$/, '') : 'http://localhost:11434/v1';
+    const model = appState.aiModel || 'llama3';
+    const apiKey = getApiKey() || 'lm-studio'; // Some endpoints need a dummy key
 
-  const schema = {
-    type: Type.OBJECT,
-    properties: {
-      unit_of_observation: { type: Type.STRING },
-      exposure_vehicle: { type: Type.STRING },
-      species_context: { type: Type.STRING },
-      preferred_population_term: { type: Type.STRING },
-      causal_logic: { type: Type.STRING }
-    },
-    required: ["unit_of_observation", "exposure_vehicle", "species_context", "preferred_population_term", "causal_logic"]
-  };
+    // Construct System Prompt manually since OpenAI API passes it as a message
+    const heuristicsBlock = (isAudit) ? `\nAPPLIED HEURISTICS:\n- COMPARATOR: ${h.comparator}\n- EXPOSURE: ${h.exposure}\n- POPULATION: ${h.population}\n- OUTCOME: ${h.outcome}` : '';
+    
+    let systemPrompt = `You are a world-class Linguistic Professor and Domain Expert in Toxicology for the EBTC (PECO-Buddy 8.1.3).
+    CRITICAL SYNTAX: Identify measurement sites/matrices and tag them like {matrix:in:maternal blood}.
+    ${heuristicsBlock}`;
 
-  return await callGeminiAPI(prompt, schema);
-};
+    // Append JSON instruction strongly if schema is present, as generic endpoints might not support response_format strictness
+    if (schema) {
+        systemPrompt += `\n\nIMPORTANT: You must output ONLY valid JSON. No markdown, no preambles.`;
+    }
 
+    try {
+        const payload = {
+            model: model,
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: prompt }
+            ],
+            temperature: config.temperature || 0.1,
+            // Try to force JSON mode if supported by the provider, but many local models ignore this param or fail if unknown
+            // response_format: schema ? { type: "json_object" } : undefined 
+        };
+
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Provider Error (${response.status}): ${errText}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+
+        if (!content) throw new Error("Empty response from AI Provider.");
+
+        appState.interactionLog.push({
+            timestamp: new Date().toISOString(),
+            provider: `OpenAI Compatible (${model})`,
+            prompt,
+            response: content
+        });
+
+        if (schema) {
+            const jsonStr = extractJsonFromString(content);
+            if (!jsonStr) throw new Error("Failed to extract JSON from provider response. Ensure the model is capable of JSON output.");
+            return JSON.parse(jsonStr);
+        }
+        return content;
+
+    } catch (error) {
+        console.error("Provider Error:", error);
+        if (statusContainer) showError(statusContainer, `AI Provider Error: ${error.message}`);
+        throw error;
+    }
+}
+
+function getApiKey() {
+    if (appState.globalApiKey && appState.globalApiKey.length > 0) return appState.globalApiKey;
+    try {
+        if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+            return process.env.API_KEY;
+        }
+    } catch (e) {}
+    return null;
+}
+
+/**
+ * Quick Suggestion Engine (Ideation)
+ */
 export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer, config = {}) => {
-  const baseSeed = appState.heuristics.baseSeed || 42;
-  // Apply generation offset to the base seed for ideation variety
-  const currentSeed = baseSeed + (config.seed ? (config.seed - 42) : 0);
-
-  const prompt = `Generate 3 distinct research questions for a ${studyType} based on: "${scope}". 
-  Tag measurement sites as {matrix:...}. 
-  Return JSON with "questions" array containing full_statement, population, exposure, comparison, outcome.`;
+  const prompt = `Generate 3 research questions for a ${studyType} based on: "${scope}". 
+  CRITICAL:
+  - Each "full_statement" MUST be a direct research statement (e.g. "The effect of prenatal lead exposure...").
+  - DO NOT use conversational or advisory phrasing like "Have you considered", "One thought is", or "Could it be useful to".
+  - Use linguistic matrix tags {matrix:connector:term} for biological samples.
+  Return JSON with a "questions" array containing: full_statement, population, exposure, comparison, outcome.`;
 
   const schema = {
     type: Type.OBJECT,
@@ -134,14 +215,96 @@ export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer,
     required: ["questions"]
   };
 
-  return await callGeminiAPI(prompt, schema, statusContainer, { seed: currentSeed });
+  return await callGeminiAPI(prompt, schema, statusContainer, { ...config, task: 'ideation', temperature: 0.7 });
+};
+
+/**
+ * Logic Audit Engine (Advisory Mode)
+ */
+export const callQuestionQualityAPI = async (question, peco, statusContainer, config = {}) => {
+  
+  // Assistance Level Mapping
+  const level = appState.assistanceLevel || 3;
+  let guidanceInstruction = "";
+  if (level === 1) guidanceInstruction = "ASSISTANCE LEVEL: MINIMAL. Only flag critical scientific errors. Be brief.";
+  else if (level === 2) guidanceInstruction = "ASSISTANCE LEVEL: LIGHT. Offer only high-value suggestions for clarity.";
+  else if (level === 3) guidanceInstruction = "ASSISTANCE LEVEL: STANDARD. Provide helpful alternatives and moderate critique.";
+  else if (level === 4) guidanceInstruction = "ASSISTANCE LEVEL: DETAILED. Deeply analyse terms for precision.";
+  else if (level === 5) guidanceInstruction = "ASSISTANCE LEVEL: INTENSE/RUTHLESS. Critique every potential ambiguity with rigorous detail.";
+
+  // Frozen Components Logic
+  const frozen = appState.authorWorkflow.clarityData.frozenComponents || {};
+  const frozenKeys = Object.keys(frozen).filter(k => frozen[k]);
+  
+  let frozenInstruction = "";
+  if (frozenKeys.length > 0) {
+      frozenInstruction = `CRITICAL: The following components are FINALISED by the user: ${JSON.stringify(frozenKeys)}. DO NOT generate any advisory cards or suggestions for these components. Focus your energy on the remaining components.`;
+  }
+
+  const prompt = `Review protocol: "${question}" using components: ${JSON.stringify(peco)}. 
+  Generate 5 to 6 distinct advisory cards per PECO component.
+  
+  ${guidanceInstruction}
+  ${frozenInstruction}
+
+  CRITICAL ADVISORY RULES FOR AMBIGUITY REDUCTION:
+  - "refined_term": Must be a single Minimal Conceptual Unit (e.g. "Sprague-Dawley Rats", "Lead acetate 10mg/kg", "IQ scores at 24 months"). 
+  - PREFER specific parameters (doses, concentrations, timeframes, specific strains) over broad categories.
+  - "advisory_message": Provide a detailed, elaborate scientific justification (3-5 sentences). Explain exactly how the refined term reduces ambiguity and why the current term is linguistically or scientifically unresolved.
+  - Tone: Constructive Linguistic Professor.
+  - Return JSON.`;
+
+  const schema = {
+    type: Type.OBJECT,
+    properties: {
+      strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+      missing_components: { type: Type.ARRAY, items: { type: Type.STRING } },
+      feedback: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            component: { type: Type.STRING },
+            suggestions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                    advisory_message: { type: Type.STRING },
+                    rationale: { type: Type.STRING },
+                    refined_term: { type: Type.STRING }
+                },
+                required: ["advisory_message", "rationale", "refined_term"]
+              }
+            }
+          },
+          required: ["component", "suggestions"]
+        }
+      }
+    },
+    required: ["strengths", "missing_components", "feedback"]
+  };
+  return await callGeminiAPI(prompt, schema, statusContainer, { ...config, task: 'audit' });
+};
+
+export const callContextLogicEngineAPI = async (question) => {
+  const prompt = `Perform logic deconstruction for: "${question}". Return JSON with unit_of_observation, exposure_vehicle, species_context, preferred_population_term, causal_logic. Suggest matrix tags.`;
+  const schema = {
+    type: Type.OBJECT,
+    properties: {
+      unit_of_observation: { type: Type.STRING },
+      exposure_vehicle: { type: Type.STRING },
+      species_context: { type: Type.STRING },
+      preferred_population_term: { type: Type.STRING },
+      causal_logic: { type: Type.STRING }
+    },
+    required: ["unit_of_observation", "exposure_vehicle", "species_context", "preferred_population_term", "causal_logic"]
+  };
+  return await callGeminiAPI(prompt, schema);
 };
 
 export const callDomainIdentifierAPI = async (text, contextLogic = null) => {
-  const prompt = `Identify scientific domain and PECO concepts for: "${text}". 
-  ${contextLogic ? `CRITICAL LOGIC FRAME: The study concerns ${contextLogic.species_context}. The unit of observation is ${contextLogic.unit_of_observation}. The exposure is mediated via ${contextLogic.exposure_vehicle}.` : ''}
-  Tag matrices as {matrix:...}.`;
-  
+  const prompt = `Identify domain for: "${text}". Context: ${JSON.stringify(contextLogic)}`;
   const schema = {
     type: Type.OBJECT,
     properties: {
@@ -157,16 +320,16 @@ export const callDomainIdentifierAPI = async (text, contextLogic = null) => {
 };
 
 export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, studyType, contextLogic = null) => {
-  const prompt = `Extract precise PECO for ${studyType} in ${domain}. 
-  Text: "${fullText}". 
-  ${contextLogic ? `
-  MANDATORY CONSTRAINTS from Context Logic Engine:
-  - SPECIES: ${contextLogic.species_context}
-  - POPULATION TERM: You MUST use the term "${contextLogic.preferred_population_term}" for the Population field.
-  - UNIT OF OBSERVATION: Only include the "${contextLogic.unit_of_observation}" in the population, NOT the exposure vehicle (${contextLogic.exposure_vehicle}).
-  ` : ''}
-  Tag matrices as {matrix:...}.`;
+  const prompt = `Identify and extract DISCRETE Minimal Conceptual Units for each PECO component from: "${fullText}".
   
+  CRITICAL EXTRACTION RULES (AMBIGUITY REDUCTION):
+  - Extract parameters if available (doses, concentrations, specific age ranges, durations).
+  - Example Population: "Pregnant Wistar Rats" instead of "Rats".
+  - Example Exposure: "Deltamethrin 5mg/kg/day" instead of "Pesticide".
+  - Align with ontology standards (MeSH, EBI).
+  - Use matrix tags {matrix:connector:term} for biological samples.
+  - Return JSON.`;
+
   const schema = {
     type: Type.OBJECT,
     properties: {
@@ -177,50 +340,59 @@ export const callSpecialistPecoExtractorAPI = async (domain, prelim, fullText, s
     },
     required: ["population", "exposure", "comparison", "outcome"]
   };
-  return await callGeminiAPI(prompt, schema);
-};
-
-export const callQuestionQualityAPI = async (question, peco) => {
-  const prompt = `Audit question: "${question}" with PECO components: ${JSON.stringify(peco)}.
-  
-  For any ambiguities found, ensure the 'reason' is phrased in a helpful, advisory tone rather than a critical one.
-  
-  LINGUISTIC TOLERANCE: 
-  - Treat '&', 'and', 'to', and hyphens '-' interchangeably when discussing numeric ranges (e.g., "6-12" is synonymous with "6 and 12" or "6 to 12" in range contexts). 
-  - Do not flag discrepancies for minor numeric formatting differences if the values are identical.
-  - Do not flag 'missing' components if they are implied by the study type context.`;
-
-  const schema = {
-    type: Type.OBJECT,
-    properties: {
-      strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
-      missing_components: { type: Type.ARRAY, items: { type: Type.STRING } },
-      ambiguities: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            component: { type: Type.STRING },
-            term: { type: Type.STRING },
-            severity: { type: Type.STRING },
-            reason: { type: Type.STRING },
-            suggestions: { type: Type.ARRAY, items: { type: Type.STRING } }
-          },
-          required: ["component", "term", "severity", "reason", "suggestions"]
-        }
-      }
-    },
-    required: ["strengths", "missing_components", "ambiguities"]
-  };
-  return await callGeminiAPI(prompt, schema);
+  return await callGeminiAPI(prompt, schema, null, { task: 'extraction' });
 };
 
 export const callPecoSynthesizerAPI = async (peco) => {
-  const prompt = `Synthesise a formal research question from: ${JSON.stringify(peco)}. Keep {matrix:...} tags.`;
+  const prompt = `Synthesise a formal research question from these minimal components: ${JSON.stringify(peco)}.
+  
+  CRITICAL LOGIC RULE: DELIMITERS. 
+  - Terms separated by " & " indicate collective inclusion (logical AND). The statement must use "and", "in combination with", or "concurrently".
+  - Terms separated by " ; " indicate alternatives (logical OR). The statement must use "or", "either", or "alternatively".
+  
+  INTELLECTUAL SYNTHESIS RULES:
+  1. Produce a "semantic_statement" (the full protocol statement). Ensure the grammar strictly follows the AND (&) vs OR (;) logic.
+  2. Produce a "naturalised_peco" object where each field is rewritten as a fluid scientific phrase reflecting the chosen delimiters.
+  
+  No advisory fluff. Return JSON.`;
+
   const schema = {
     type: Type.OBJECT,
-    properties: { semantic_statement: { type: Type.STRING } },
-    required: ["semantic_statement"]
+    properties: { 
+      semantic_statement: { type: Type.STRING },
+      naturalised_peco: {
+        type: Type.OBJECT,
+        properties: {
+          population: { type: Type.STRING },
+          exposure: { type: Type.STRING },
+          comparison: { type: Type.STRING },
+          outcome: { type: Type.STRING }
+        },
+        required: ["population", "exposure", "comparison", "outcome"]
+      }
+    },
+    required: ["semantic_statement", "naturalised_peco"]
   };
-  return await callGeminiAPI(prompt, schema);
+  return await callGeminiAPI(prompt, schema, null, { task: 'synthesis' });
+};
+
+export const callEligibilitySuggesterAPI = async (peco, statusContainer) => {
+  const prompt = `Based on the following PECO components, generate a list of 5 inclusion criteria and 5 exclusion criteria for a systematic review protocol.
+  Population: ${peco.population}
+  Exposure: ${peco.exposure}
+  Comparison: ${peco.comparison}
+  Outcome: ${peco.outcome}
+  
+  Return JSON with "inclusion_criteria" (array of strings) and "exclusion_criteria" (array of strings).`;
+  
+  const schema = {
+    type: Type.OBJECT,
+    properties: {
+      inclusion_criteria: { type: Type.ARRAY, items: { type: Type.STRING } },
+      exclusion_criteria: { type: Type.ARRAY, items: { type: Type.STRING } }
+    },
+    required: ["inclusion_criteria", "exclusion_criteria"]
+  };
+  
+  return await callGeminiAPI(prompt, schema, statusContainer, { task: 'ideation' });
 };

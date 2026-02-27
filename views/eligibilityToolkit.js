@@ -11,21 +11,15 @@ export function initEligibilityToolkitView() {
     const inclusionTextarea = document.getElementById('eligibility-inclusion');
     const exclusionTextarea = document.getElementById('eligibility-exclusion');
     const suggestBtn = document.getElementById('eligibility-suggest-btn');
-    const saveBtn = document.getElementById('eligibility-save-btn');
     const suggestionsDisplay = document.getElementById('eligibility-suggestions-display');
 
     // Robust State Access
     let currentPeco = null;
     try {
-        if (appState.notebookData && (appState.notebookData.population || appState.notebookData.exposure)) {
-            currentPeco = {
-                population: appState.notebookData.population,
-                exposure: appState.notebookData.exposure,
-                comparison: appState.notebookData.comparison,
-                outcome: appState.notebookData.outcome
-            };
-        } else if (appState.authorWorkflow && appState.authorWorkflow.pecoWorkshopData) {
+        if (appState.authorWorkflow && appState.authorWorkflow.pecoWorkshopData) {
             currentPeco = appState.authorWorkflow.pecoWorkshopData.peco;
+        } else if (appState.authorWorkflow && appState.authorWorkflow.liveCoAuthorData) {
+            currentPeco = appState.authorWorkflow.liveCoAuthorData.peco;
         }
     } catch(err) {
         console.error("Error reading PECO state for Eligibility Toolkit:", err);
@@ -43,13 +37,10 @@ export function initEligibilityToolkitView() {
             `;
             pecoContextContainer.classList.remove('italic');
         } else {
-             pecoContextContainer.innerHTML = 'No PECO context loaded. Please complete PECO analysis or load a project.';
+             pecoContextContainer.innerHTML = 'No PECO context loaded. Please complete PECO analysis.';
              pecoContextContainer.classList.add('italic');
         }
     }
-
-    if (inclusionTextarea) inclusionTextarea.value = appState.notebookData.eligibility_inclusion || '';
-    if (exclusionTextarea) exclusionTextarea.value = appState.notebookData.eligibility_exclusion || '';
 
     if (suggestBtn) {
         suggestBtn.addEventListener('click', async () => {
@@ -103,18 +94,6 @@ export function initEligibilityToolkitView() {
                     btn.parentElement?.remove();
                 }
             }
-        });
-    }
-
-    if (saveBtn) {
-        saveBtn.addEventListener('click', () => {
-            if (inclusionTextarea) appState.notebookData.eligibility_inclusion = inclusionTextarea.value;
-            if (exclusionTextarea) appState.notebookData.eligibility_exclusion = exclusionTextarea.value;
-            
-            const event = new CustomEvent('notebook-save-request');
-            document.dispatchEvent(event);
-
-            ToastService.show('Eligibility criteria saved to notebook.', 'success');
         });
     }
 }

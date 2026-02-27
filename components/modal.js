@@ -6,7 +6,7 @@ export const showModal = (title, content, callback, footerCallback, isReportModa
             <div class="${modalClass}">
                 <div class="modal-header">
                     <span>${title}</span>
-                    <button id="header-close-modal-btn" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+                    <button id="header-close-modal-btn" aria-label="Close modal">&times;</button>
                 </div>
                 ${content}
             </div>

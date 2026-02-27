@@ -1,6 +1,5 @@
 export const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 export const EBI_OLS_BASE_URL = 'https://www.ebi.ac.uk/ols4/api';
-export const NOTEBOOK_STORAGE_KEY = 'pecoBuddyNotebookData';
 
 export const PECO_MAP = {
     population: { label: "Population", color: "#E91E63", purpose: "a population group (e.g., human, animal model), focusing on MeSH trees for 'Persons', 'Age Groups', or 'Organisms'" },

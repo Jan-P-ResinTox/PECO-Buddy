@@ -70,17 +70,15 @@ export function initReviewerToolkitView() {
                 return;
             }
 
-            // Reset log for new audit session
             appState.interactionLog = [];
             
             runAuditBtn.disabled = true;
-            reportContainer.innerHTML = ''; // Clear previous reports
+            reportContainer.innerHTML = ''; 
             showLoading(reportContainer, 'Preparing manuscript for analysis...');
 
             try {
                 const fullText = await extractTextFromFile(auditFile);
 
-                // Step 1: Identify Sections
                 showLoading(reportContainer, 'Identifying manuscript sections (scanning first 30,000 chars)...');
                 const sectionsPrompt = `Based on the following text from a scientific manuscript, identify and extract the content for these specific sections: "Abstract", "Introduction", "Methods", "Results", and "Discussion". Return a JSON object where each key is the section name and the value is the text content of that section. If a section is not found, omit it from the JSON. Text: """${fullText.substring(0, 30000)}"""`;
                 
@@ -102,10 +100,8 @@ export function initReviewerToolkitView() {
                     throw new Error("No usable manuscript sections (Abstract, Methods, etc.) were identified in the scanned portion.");
                 }
 
-                // Prepare the Live Feed Table
                 renderLiveFeedSkeleton(reportContainer, sectionEntries.map(e => e[0]));
 
-                // Step 2: Sequential Analysis with Live Updates
                 const sectionPecos = [];
                 for (const [sectionName, sectionText] of sectionEntries) {
                     updateSectionStatus(sectionName, 'analysing');
@@ -126,7 +122,6 @@ export function initReviewerToolkitView() {
                     throw new Error("Could not extract enough PECO data for cross-sectional comparison.");
                 }
 
-                // Step 3: Global Consistency Synthesis
                 const consistencyContainer = document.createElement('div');
                 consistencyContainer.id = 'audit-synthesis-container';
                 consistencyContainer.className = 'mt-12 animate-fade-in';
@@ -163,7 +158,6 @@ export function initReviewerToolkitView() {
                 const auditResult = await GeminiAPI.callGeminiAPI(consistencyPrompt, consistencySchema, consistencyContainer);
                 appState.consistencyAuditData = auditResult;
 
-                // Final Render of the synthesis part
                 renderAuditSynthesis(auditResult, consistencyContainer);
 
             } catch (err) {
@@ -176,9 +170,6 @@ export function initReviewerToolkitView() {
     }
 }
 
-/**
- * Renders the container for the live extraction feed.
- */
 function renderLiveFeedSkeleton(container, sectionNames) {
     container.innerHTML = `
         <div class="mt-8 animate-fade-in">
@@ -217,9 +208,6 @@ function renderLiveFeedSkeleton(container, sectionNames) {
     `;
 }
 
-/**
- * Updates the visual status of a row in the live feed.
- */
 function updateSectionStatus(sectionName, status) {
     const row = document.getElementById(`row-${sectionName.toLowerCase()}`);
     if (!row) return;
@@ -250,9 +238,6 @@ function updateSectionStatus(sectionName, status) {
     }
 }
 
-/**
- * Updates a specific row with extracted PECO results.
- */
 function updateSectionResult(sectionName, peco) {
     const row = document.getElementById(`row-${sectionName.toLowerCase()}`);
     if (!row) return;
@@ -271,12 +256,12 @@ function updateSectionResult(sectionName, peco) {
 /**
  * Renders the final interaction log modal.
  */
-function showTransparencyLogModal() {
+export function showTransparencyLogModal() {
     const logItems = appState.interactionLog.map((item, idx) => `
         <div class="p-6 border-b last:border-0 hover:bg-slate-50 transition-colors">
             <div class="flex justify-between items-start mb-4">
                 <div class="flex items-center gap-3">
-                    <span class="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-extrabold text-xs">${idx + 1}</span>
+                    <span class="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-extrabold text-xs">${idx + 1}</span>
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${new Date(item.timestamp).toLocaleTimeString('en-GB')}</span>
                 </div>
                 <span class="px-2 py-1 bg-teal-100 text-teal-700 rounded text-[9px] font-extrabold uppercase">Step Completed</span>
@@ -285,10 +270,10 @@ function showTransparencyLogModal() {
             <div class="space-y-4">
                 <div>
                     <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Scientific Prompt</h5>
-                    <div class="p-4 bg-slate-900 text-slate-300 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed">${escapeHtml(item.prompt)}</div>
+                    <div class="p-4 bg-slate-100 text-slate-700 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed border border-slate-200">${escapeHtml(item.prompt)}</div>
                 </div>
                 <div>
-                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Gemini JSON Response</h5>
+                    <h5 class="text-[10px] font-extrabold uppercase text-slate-400 mb-2">Structural Response</h5>
                     <div class="p-4 bg-teal-50 text-teal-900 rounded-xl text-xs font-mono whitespace-pre-wrap leading-relaxed border border-teal-100">${escapeHtml(item.response)}</div>
                 </div>
             </div>
@@ -296,12 +281,12 @@ function showTransparencyLogModal() {
     `).join('');
 
     const content = `
-        <div class="report-modal-content flex-grow overflow-y-auto custom-scrollbar">
+        <div class="report-modal-content flex-grow overflow-y-auto custom-scrollbar h-[60vh]">
             <div class="p-8 bg-slate-50 border-b">
-                <p class="text-sm text-slate-600 mb-4">This log contains the complete semantic interaction trail used to generate the current audit. Every prompt sent to the model and its raw JSON response is preserved for scientific reproducibility.</p>
+                <p class="text-sm text-slate-600 mb-4">This log contains the complete semantic interaction trail used to generate the current session content.</p>
                 <div class="flex gap-4">
                     <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Total Steps: ${appState.interactionLog.length}</div>
-                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Engine: Gemini-3-Flash</div>
+                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Engine: PECO-Buddy 8.1.3</div>
                 </div>
             </div>
             <div class="bg-white">
@@ -313,13 +298,14 @@ function showTransparencyLogModal() {
     showModal('Extended Transparency Log', content, null, (modal, close) => {
         const container = modal.querySelector('.modal-container, .report-modal-container');
         const foot = container.appendChild(document.createElement('div'));
-        foot.className = 'modal-footer p-4 border-t flex justify-end gap-3';
+        foot.className = 'modal-footer p-4 border-t flex justify-end gap-3 bg-white';
         foot.innerHTML = `
-            <button class="bg-slate-200 text-slate-700 px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest">Close</button>
-            <button id="download-log-btn" class="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Download Log (.json)</button>
+            <button id="download-log-btn" class="bg-slate-700 text-white px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg hover:bg-slate-800 transition-colors">Download Log (.json)</button>
+            <button class="bg-slate-200 text-slate-700 px-6 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-slate-300 transition-colors">Close</button>
         `;
-        foot.querySelector('button').onclick = close;
-        foot.querySelector('#download-log-btn').onclick = () => {
+        foot.querySelector('.bg-slate-200').onclick = close;
+        const dlBtn = foot.querySelector('#download-log-btn');
+        if (dlBtn) dlBtn.onclick = () => {
             const blob = new Blob([JSON.stringify(appState.interactionLog, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -327,14 +313,11 @@ function showTransparencyLogModal() {
             a.download = `peco-interaction-log-${new Date().getTime()}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            ToastService.show('Log downloaded successfully.', 'success');
+            ToastService.show('Log downloaded.', 'success');
         };
     }, true);
 }
 
-/**
- * Renders the final consistency synthesis card.
- */
 function renderAuditSynthesis(data, container) {
     if (!container || !data) return;
 
@@ -369,8 +352,6 @@ function renderAuditSynthesis(data, container) {
 
     container.innerHTML = `
         <div id="audit-report-synthesis-card" class="bg-white p-8 rounded-[2.5rem] shadow-card border border-slate-100 overflow-hidden relative">
-            <div class="absolute top-0 right-0 w-48 h-48 bg-slate-50 rounded-bl-full -mr-16 -mt-16 -z-10"></div>
-            
             <div id="audit-report-content">
                 <div class="flex flex-col md:flex-row items-center gap-8 mb-10">
                     <div class="w-24 h-24 rounded-3xl ${headerClass} border flex items-center justify-center shadow-sm">
@@ -390,7 +371,7 @@ function renderAuditSynthesis(data, container) {
                                     <th class="p-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Comparison Context</th>
                                     <th class="p-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">PECO Component</th>
                                     <th class="p-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Severity</th>
-                                    <th class="p-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Reviewer Observations</th>
+                                    <th class="p-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Observations</th>
                                 </tr>
                             </thead>
                             <tbody>${issuesHtml}</tbody>
@@ -401,42 +382,25 @@ function renderAuditSynthesis(data, container) {
                             <i class="fa-solid fa-check-double text-2xl"></i>
                         </div>
                         <p class="text-sm font-extrabold text-slate-500 uppercase tracking-widest">No internal inconsistencies detected.</p>
-                        <p class="text-xs text-slate-400 mt-2 font-medium">The P, E, and O parameters appear stable across all identified sections.</p>
                        </div>`
                 }
             </div>
 
             <div class="mt-10 pt-8 border-t flex flex-wrap justify-between items-center gap-6">
                 <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <i class="fa-solid fa-shield-halved text-teal-600"></i> Audit Report
+                    <i class="fa-solid fa-shield-halved text-teal-600"></i> Audit Report | Engine: PECO-Buddy 8.1.3
                 </div>
                 <div class="flex gap-3">
                     <button id="show-transparency-log-btn" class="bg-white border border-slate-200 text-slate-600 font-extrabold py-3 px-6 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"><i class="fa-solid fa-code"></i> Extended Transparency</button>
-                    <button id="export-audit-docx-btn" class="bg-slate-800 text-white font-extrabold py-3 px-6 rounded-2xl text-[10px] uppercase tracking-widest shadow-lg hover:bg-black transition-all flex items-center gap-2"><i class="fa-solid fa-file-word"></i> Export DOCX</button>
                     <button id="export-audit-pdf-btn" class="bg-rose-600 text-white font-extrabold py-3 px-6 rounded-2xl text-[10px] uppercase tracking-widest shadow-lg hover:bg-rose-700 transition-all flex items-center gap-2"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
                 </div>
             </div>
         </div>
     `;
 
-    // Attach interaction log handler
     const logBtn = container.querySelector('#show-transparency-log-btn');
-    if (logBtn) {
-        logBtn.addEventListener('click', showTransparencyLogModal);
-    }
+    if (logBtn) logBtn.addEventListener('click', showTransparencyLogModal);
 
-    // Attach export handlers
     const pdfBtn = container.querySelector('#export-audit-pdf-btn');
-    const docxBtn = container.querySelector('#export-audit-docx-btn');
-    
-    if (pdfBtn) {
-        pdfBtn.addEventListener('click', () => {
-            handleExport('#audit-report-content', 'pdf', 'peco-audit-report.pdf');
-        });
-    }
-    if (docxBtn) {
-        docxBtn.addEventListener('click', () => {
-            handleExport('#audit-report-content', 'docx', 'peco-audit-report.docx');
-        });
-    }
+    if (pdfBtn) pdfBtn.addEventListener('click', () => handleExport('#audit-report-content', 'pdf', 'peco-audit-report.pdf'));
 }
