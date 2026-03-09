@@ -131,6 +131,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                 }
 
+                // Strip Metadata Toggle
+                const stripMetadataToggle = modal.querySelector('#settings-strip-metadata-toggle');
+                if (stripMetadataToggle) {
+                    stripMetadataToggle.checked = appState.stripMetadata;
+                    stripMetadataToggle.onchange = (e) => {
+                        appState.stripMetadata = e.target.checked;
+                        localStorage.setItem('peco_buddy_strip_metadata', e.target.checked);
+                        ToastService.show(`Metadata stripping ${e.target.checked ? 'enabled' : 'disabled'}.`, 'info');
+                    };
+                }
+
                 // Tabs
                 const tabs = modal.querySelectorAll('.settings-tab-btn');
                 const contents = modal.querySelectorAll('.settings-tab-content');

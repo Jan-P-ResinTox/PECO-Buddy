@@ -3,8 +3,9 @@ import { templates } from './templates.js';
 import { ToastService } from '../components/toast.js';
 import { PECO_MAP } from '../config.js';
 import * as GeminiAPI from '../api/gemini.js';
+import { runLocalNlpAnalysis } from './nlpToolkit.js';
 import { showModal } from '../components/modal.js';
-import { formatPecoForDisplay, styleMatrices, showLoading, showError, copyTableToClipboard, escapeHtml } from '../utils.js';
+import { formatPecoForDisplay, styleMatrices, showLoading, showError, copyTableToClipboard, escapeHtml, stripMetadataFromText } from '../utils.js';
 import { showTransparencyLogModal } from './reviewPeco.js';
 
 const BASIC_STUDY_TYPES = [
@@ -215,8 +216,30 @@ function initIdeationView(container) {
   const renderSuggestions = () => {
     resultsContainer.innerHTML = (appState.authorWorkflow.ideationData.generatedSuggestions || []).map((q, i) => `
       <div class="bg-white p-8 rounded-3xl border mb-6 shadow-sm hover:shadow-md transition-shadow">
-        <p class="font-bold text-slate-800 text-lg">"${styleMatrices(q.full_statement, 'display')}"</p>
-        <div class="text-right mt-6">
+        <p class="font-bold text-slate-800 text-lg mb-6">"${styleMatrices(q.full_statement, 'display')}"</p>
+        
+        <div class="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden mb-6">
+            <table class="w-full text-xs text-left">
+                <tr class="border-b border-slate-100 last:border-0">
+                    <td class="p-3 w-1/4"><span class="text-[10px] font-extrabold uppercase tracking-widest text-white px-2 py-1 rounded" style="background-color:${PECO_MAP.population.color}">Population</span></td>
+                    <td class="p-3 font-bold text-slate-700">${styleMatrices(q.population || 'N/A', 'display')}</td>
+                </tr>
+                <tr class="border-b border-slate-100 last:border-0">
+                    <td class="p-3 w-1/4"><span class="text-[10px] font-extrabold uppercase tracking-widest text-white px-2 py-1 rounded" style="background-color:${PECO_MAP.exposure.color}">Exposure</span></td>
+                    <td class="p-3 font-bold text-slate-700">${styleMatrices(q.exposure || 'N/A', 'display')}</td>
+                </tr>
+                <tr class="border-b border-slate-100 last:border-0">
+                    <td class="p-3 w-1/4"><span class="text-[10px] font-extrabold uppercase tracking-widest text-white px-2 py-1 rounded" style="background-color:${PECO_MAP.comparison.color}">Comparator</span></td>
+                    <td class="p-3 font-bold text-slate-700">${styleMatrices(q.comparison || 'N/A', 'display')}</td>
+                </tr>
+                <tr class="border-b border-slate-100 last:border-0">
+                    <td class="p-3 w-1/4"><span class="text-[10px] font-extrabold uppercase tracking-widest text-white px-2 py-1 rounded" style="background-color:${PECO_MAP.outcome.color}">Outcome</span></td>
+                    <td class="p-3 font-bold text-slate-700">${styleMatrices(q.outcome || 'N/A', 'display')}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="text-right">
           <button class="select-q-btn bg-teal-600 hover:bg-teal-700 text-white px-10 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest" data-index="${i}">Develop this Question</button>
         </div>
       </div>
@@ -279,25 +302,48 @@ function initClarityView(container) {
     }
 
     try {
-      showProgressGauge(dashboardContainer, isRefresh ? 'Re-analysing Logic Strategy...' : 'Analysing Logic Structure...', 15, "Extracting Semantic Domains");
-      
       const q = appState.authorWorkflow.clarityData.researchQuestion;
-      const config = { seed: appState.globalSeed };
-      if (appState.authorWorkflow.clarityData.analysisDepth === 'thorough') config.thinkingConfig = { thinkingBudget: 2048 };
       
-      const contextLogic = await GeminiAPI.callContextLogicEngineAPI(q);
-      showProgressGauge(dashboardContainer, 'Deconstructing Linguistic Syntax...', 50, "Scanning Context");
-      const prelim = await GeminiAPI.callDomainIdentifierAPI(q, contextLogic);
-      showProgressGauge(dashboardContainer, 'Mapping Matrix Intersections...', 75, "Verification Phase");
-      const peco = await GeminiAPI.callSpecialistPecoExtractorAPI(prelim.domain, prelim, q, appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General', contextLogic);
-      const analysis = await GeminiAPI.callQuestionQualityAPI(q, peco, dashboardContainer, config);
-      showProgressGauge(dashboardContainer, 'Finalising Advisory Feed...', 100, "Synthesis Complete");
+      if (appState.analysisEngine === 'nlp') {
+          showProgressGauge(dashboardContainer, 'Running Local NLP Analysis...', 50, "Matching Vocabulary");
+          
+          // Strip metadata if enabled (though q is usually short text, good practice)
+          const textToAnalyze = appState.stripMetadata ? stripMetadataFromText(q) : q;
+          
+          // Simulate a small delay for UX
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          const result = runLocalNlpAnalysis(textToAnalyze);
+          
+          showProgressGauge(dashboardContainer, 'Finalising Advisory Feed...', 100, "Synthesis Complete");
 
-      if (!appState.authorWorkflow.liveCoAuthorData.peco || !Object.values(appState.authorWorkflow.liveCoAuthorData.peco).some(v => !!v)) {
-        appState.authorWorkflow.liveCoAuthorData.peco = peco;
+          if (!appState.authorWorkflow.liveCoAuthorData.peco || !Object.values(appState.authorWorkflow.liveCoAuthorData.peco).some(v => !!v)) {
+            appState.authorWorkflow.liveCoAuthorData.peco = result.peco;
+          }
+          appState.authorWorkflow.clarityData.analysis = result.analysis;
+          setTimeout(() => renderResults(), 800);
+
+      } else {
+          // AI Engine (Gemini)
+          showProgressGauge(dashboardContainer, isRefresh ? 'Re-analysing Logic Strategy...' : 'Analysing Logic Structure...', 15, "Extracting Semantic Domains");
+          
+          const config = { seed: appState.globalSeed };
+          if (appState.authorWorkflow.clarityData.analysisDepth === 'thorough') config.thinkingConfig = { thinkingBudget: 2048 };
+          
+          const contextLogic = await GeminiAPI.callContextLogicEngineAPI(q);
+          showProgressGauge(dashboardContainer, 'Deconstructing Linguistic Syntax...', 50, "Scanning Context");
+          const prelim = await GeminiAPI.callDomainIdentifierAPI(q, contextLogic);
+          showProgressGauge(dashboardContainer, 'Mapping Matrix Intersections...', 75, "Verification Phase");
+          const peco = await GeminiAPI.callSpecialistPecoExtractorAPI(prelim.domain, prelim, q, appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General', contextLogic);
+          const analysis = await GeminiAPI.callQuestionQualityAPI(q, peco, dashboardContainer, config);
+          showProgressGauge(dashboardContainer, 'Finalising Advisory Feed...', 100, "Synthesis Complete");
+
+          if (!appState.authorWorkflow.liveCoAuthorData.peco || !Object.values(appState.authorWorkflow.liveCoAuthorData.peco).some(v => !!v)) {
+            appState.authorWorkflow.liveCoAuthorData.peco = peco;
+          }
+          appState.authorWorkflow.clarityData.analysis = analysis;
+          setTimeout(() => renderResults(), 800);
       }
-      appState.authorWorkflow.clarityData.analysis = analysis;
-      setTimeout(() => renderResults(), 800);
     } catch(e) { showError(dashboardContainer, e.message); }
     finally {
         scoreBtn.disabled = false;
@@ -341,7 +387,7 @@ function initClarityView(container) {
             <h4 class="text-sm font-extrabold uppercase text-slate-400 tracking-widest">Scientific Advisory Feed</h4>
             <div class="flex gap-2 mt-2">
                 <button id="sync-all-btn" class="text-[10px] font-extrabold text-teal-600 bg-teal-50 px-4 py-2 rounded-xl border border-teal-100 uppercase tracking-widest hover:bg-teal-100 transition-colors">
-                    <i class="fa-solid fa-arrows-rotate mr-2"></i> Update Protocol Statement
+                    <i class="fa-solid fa-arrows-rotate mr-2"></i> Update Research Question
                 </button>
                 <button id="refresh-audit-btn" class="text-[10px] font-extrabold text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-teal-100 uppercase tracking-widest hover:bg-teal-100 transition-colors">
                     <i class="fa-solid fa-wand-sparkles mr-2"></i> Refresh Advisory
@@ -362,7 +408,7 @@ function initClarityView(container) {
                     return `
                     <div class="peco-dashboard-card bg-slate-50/50 rounded-3xl border border-slate-100 p-8 hover:border-teal-500 transition-all flex flex-col gap-8 relative overflow-hidden" data-key="${key}">
                         <div class="flex justify-between items-center">
-                            <span class="text-[12px] font-extrabold uppercase tracking-widest" style="color:${PECO_MAP[key].color}">${PECO_MAP[key].label}</span>
+                            <span class="text-[12px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-lg text-white" style="background-color:${PECO_MAP[key].color}">${PECO_MAP[key].label}</span>
                             <div class="flex gap-2">
                                 <button class="freeze-component-btn px-4 py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all shadow-sm ${isFrozen ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white border-slate-200 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}" title="I am happy with this">
                                     ${isFrozen ? '<i class="fa-solid fa-lock mr-1"></i> Locked' : '<i class="fa-regular fa-thumbs-up mr-1"></i> Happy'}
@@ -410,9 +456,15 @@ function initClarityView(container) {
                                                             <span class="text-[9px] font-extrabold uppercase tracking-widest text-teal-600 block mb-1">Proposed Resolution</span>
                                                             <div class="bg-teal-50 px-4 py-2 rounded-xl border border-teal-100 inline-block text-teal-800 font-bold text-[12px] shadow-sm">${styleMatrices(s.refined_term, 'display')}</div>
                                                         </div>
-                                                        <span class="text-[9px] font-extrabold bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase tracking-tighter">Precision +</span>
                                                     </div>
-                                                    <p class="text-[12px] text-slate-700 leading-relaxed font-semibold mb-6 break-words">${s.advisory_message}</p>
+                                                    <p class="text-[12px] text-slate-700 leading-relaxed font-semibold mb-4 break-words">${s.advisory_message}</p>
+                                                    
+                                                    ${s.counter_consideration ? `
+                                                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-100 mb-6">
+                                                        <p class="text-[9px] font-bold text-amber-700 uppercase tracking-widest mb-1"><i class="fa-solid fa-scale-unbalanced mr-1"></i> Counter-Consideration</p>
+                                                        <p class="text-[10px] text-amber-900 leading-relaxed font-medium">${s.counter_consideration}</p>
+                                                    </div>` : ''}
+
                                                     <div class="mt-auto grid grid-cols-2 gap-3">
                                                         <button class="suggestion-switch-btn bg-slate-800 text-white text-[10px] font-extrabold py-3 rounded-2xl shadow-md hover:bg-slate-900 transition-all" data-term="${escapeHtml(s.refined_term)}">Replace Current</button>
                                                         <button class="suggestion-adapt-btn bg-teal-600 text-white text-[10px] font-extrabold py-3 rounded-2xl shadow-md hover:bg-teal-700 transition-all" data-term="${escapeHtml(s.refined_term)}">Add as Option</button>
@@ -442,11 +494,7 @@ function initClarityView(container) {
     `;
 
     footerContainer.innerHTML = `
-        <div class="bg-white p-10 rounded-[3.5rem] border shadow-sm flex flex-col md:flex-row justify-between items-center gap-8">
-           <div class="text-left w-full md:w-auto">
-              <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Audit Status</p>
-              <p class="text-base font-extrabold text-slate-800">Verification Complete</p>
-           </div>
+        <div class="bg-white p-10 rounded-[3.5rem] border shadow-sm flex flex-col md:flex-row justify-end items-center gap-8">
            <button id="finalise-btn" class="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white px-12 py-5 rounded-3xl font-extrabold uppercase tracking-widest text-[11px] shadow-2xl transition-all">Review Final Protocol &raquo;</button>
         </div>
     `;
@@ -544,6 +592,27 @@ function initClarityView(container) {
               }
           };
       }
+
+      pillContainer.addEventListener('click', (e) => {
+          if (e.target.classList.contains('peco-pill-remove')) {
+              const andIdx = parseInt(e.target.dataset.and);
+              const orIdx = parseInt(e.target.dataset.or);
+              
+              const andGroups = currentVal.split('&').map(s => s.trim()).filter(Boolean);
+              if (andGroups[andIdx]) {
+                  const orTerms = andGroups[andIdx].split(';').map(s => s.trim()).filter(Boolean);
+                  orTerms.splice(orIdx, 1);
+                  
+                  if (orTerms.length === 0) {
+                      andGroups.splice(andIdx, 1);
+                  } else {
+                      andGroups[andIdx] = orTerms.join(' ; ');
+                  }
+                  currentVal = andGroups.join(' & ');
+                  syncStateAndUI();
+              }
+          }
+      });
 
       card.querySelectorAll('.suggestion-switch-btn').forEach(btn => {
           btn.onclick = () => { currentVal = btn.dataset.term; syncStateAndUI(); };
@@ -683,7 +752,7 @@ function initPecoWorkshopView(container) {
         <table class="w-full text-sm border-collapse rounded-[2rem] overflow-hidden border shadow-sm">
             ${Object.keys(PECO_MAP).map(key => `
                 <tr class="border-b last:border-0">
-                    <th class="p-6 bg-slate-50 text-left w-1/4 font-extrabold uppercase text-[10px] tracking-widest text-slate-400">${PECO_MAP[key].label}</th>
+                    <th class="p-6 bg-slate-50 text-left w-1/4"><span class="text-[10px] font-extrabold uppercase tracking-widest text-white px-3 py-1 rounded" style="background-color:${PECO_MAP[key].color}">${PECO_MAP[key].label}</span></th>
                     <td class="p-6 bg-white font-bold text-slate-800 text-lg">${styleMatrices(pecoSource[key] || '', 'display')}</td>
                 </tr>
             `).join('')}

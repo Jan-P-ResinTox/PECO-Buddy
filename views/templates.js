@@ -117,7 +117,10 @@ export const templates = {
                 </div>
                 <div id="study-type-selector"></div>
             </div>
-            <button id="generate-ideation-btn" class="w-full bg-teal-600 text-white py-6 rounded-[2.5rem] font-extrabold uppercase text-sm tracking-widest shadow-xl hover:bg-teal-700 transition-all">Generate Suggestions</button>
+            <div class="flex flex-col gap-4">
+                <button id="generate-ideation-btn" class="w-full bg-teal-600 text-white py-6 rounded-[2.5rem] font-extrabold uppercase text-sm tracking-widest shadow-xl hover:bg-teal-700 transition-all">Generate Suggestions</button>
+                <button id="continue-own-question-btn" class="w-full bg-white text-slate-500 border border-slate-200 py-4 rounded-[2.5rem] font-extrabold uppercase text-xs tracking-widest hover:bg-slate-50 hover:text-slate-700 transition-all" disabled>Continue with my own question</button>
+            </div>
             <div id="ideation-results-container" class="space-y-6"></div>
         </div>
     `,
@@ -129,10 +132,10 @@ export const templates = {
                         <i class="fa-solid fa-brain text-teal-600"></i> Audit Logic Control
                     </h4>
                     <div class="depth-selector" id="depth-selector-group">
-                        <button class="depth-btn" data-depth="quick">Quick</button>
-                        <button class="depth-btn active" data-depth="intermediate">Intermediate</button>
+                        <button class="depth-btn active" data-depth="standard">Standard</button>
                         <button class="depth-btn" data-depth="thorough">Thorough</button>
                     </div>
+                    <p class="text-[10px] text-slate-400 font-bold mt-3 text-right uppercase tracking-widest">Thorough = Standard + Reasoning</p>
                 </div>
                 <div class="flex flex-col gap-8">
                     <button id="score-clarity-btn" class="w-full bg-teal-600 text-white py-6 rounded-[2.5rem] font-extrabold uppercase text-xs tracking-widest shadow-lg hover:bg-teal-700 transition-all flex items-center justify-center gap-4">
@@ -142,7 +145,7 @@ export const templates = {
             </div>
             <div id="clarity-dashboard-container"></div>
             <div id="clarity-statement-section" class="bg-white p-12 rounded-[3rem] border shadow-sm">
-                <label class="block text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Protocol Statement (Read Only)</label>
+                <label class="block text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Research Question (Read Only)</label>
                 <div id="research-question-display" class="w-full text-xl font-bold p-10 rounded-[2rem] border bg-slate-50/50 italic leading-relaxed shadow-inner min-h-[140px]"></div>
             </div>
             <div id="clarity-footer-container"></div>
@@ -193,6 +196,23 @@ export const templates = {
                         </button>
                     </div>
                 </section>
+
+                <!-- Data Privacy Section Hidden for Beta (Reviewer Toolkit Not Active) -->
+                <!--
+                <section>
+                    <h4 class="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Data Privacy</h4>
+                    <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <label class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest">Strip Metadata</label>
+                            <p class="text-[10px] text-slate-400 mt-1">Automatically remove author, date, and email metadata from uploaded files before analysis.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="settings-strip-metadata-toggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                        </label>
+                    </div>
+                </section>
+                -->
 
                 <section>
                     <h4 class="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Co-Author Assistance Level</h4>

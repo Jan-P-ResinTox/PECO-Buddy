@@ -179,3 +179,53 @@ export function initNlpToolkitView() {
     });
     renderTable();
 }
+
+export const runLocalNlpAnalysis = (text) => {
+    const terms = appState.nlpTerms;
+    const peco = { population: '', exposure: '', comparison: '', outcome: '' };
+    const matches = [];
+
+    // Normalize text
+    const normalizedText = text.toLowerCase();
+
+    // Find matches
+    terms.forEach(termObj => {
+        const term = termObj.term.toLowerCase();
+        if (normalizedText.includes(term)) {
+            // Check if term is already added to avoid duplicates
+            const currentVal = peco[termObj.category];
+            if (!currentVal.toLowerCase().includes(term)) {
+                peco[termObj.category] = currentVal ? `${currentVal} ; ${termObj.term}` : termObj.term;
+                matches.push(termObj);
+            }
+        }
+    });
+
+    // Construct analysis object mocking Gemini response
+    const analysis = {
+        feedback: Object.keys(PECO_MAP).map(key => {
+            const categoryMatches = matches.filter(m => m.category === key);
+            if (categoryMatches.length > 0) {
+                return {
+                    component: key,
+                    suggestions: categoryMatches.map(m => ({
+                        refined_term: m.term,
+                        advisory_message: `Identified "${m.term}" from your local vocabulary.`,
+                        counter_consideration: null
+                    }))
+                };
+            } else {
+                return {
+                    component: key,
+                    suggestions: [{
+                        refined_term: "Missing",
+                        advisory_message: `No terms found for ${PECO_MAP[key].label} in your local vocabulary.`,
+                        counter_consideration: "Consider adding relevant terms to the NLP Toolkit."
+                    }]
+                };
+            }
+        })
+    };
+
+    return { peco, analysis };
+};

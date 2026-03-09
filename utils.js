@@ -1,4 +1,5 @@
 import { ToastService } from './components/toast.js';
+import { appState } from './state.js';
 
 export const debounce = (func, delay) => {
     let timeoutId;
@@ -42,26 +43,46 @@ export const styleMatrices = (text, mode = 'display') => {
     }).join('');
 };
 
+export const stripMetadataFromText = (text) => {
+    if (!text) return '';
+    // Remove common metadata patterns
+    return text
+        .replace(/^Author:.*$/gim, '')
+        .replace(/^Date:.*$/gim, '')
+        .replace(/^Subject:.*$/gim, '')
+        .replace(/^Keywords:.*$/gim, '')
+        .replace(/^Creator:.*$/gim, '')
+        .replace(/^Producer:.*$/gim, '')
+        .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]') // Redact emails
+        .replace(/^\s*[\r\n]/gm, ''); // Remove empty lines created by stripping
+};
+
 export const extractTextFromFile = async (file) => {
     const extension = file.name.split('.').pop().toLowerCase();
+    let fullText = '';
     
     if (extension === 'pdf') {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = '';
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
             fullText += content.items.map(item => item.str).join(' ') + '\n';
         }
-        return fullText;
     } else if (extension === 'docx') {
         const arrayBuffer = await file.arrayBuffer();
         const result = await window.mammoth.extractRawText({ arrayBuffer });
-        return result.value;
+        fullText = result.value;
     } else {
         throw new Error('Unsupported file format. Please upload PDF or DOCX.');
     }
+
+    if (appState.stripMetadata) {
+        fullText = stripMetadataFromText(fullText);
+        ToastService.show('Metadata stripped from file.', 'info');
+    }
+
+    return fullText;
 };
 
 export const copyTableToClipboard = async (tableSelector) => {

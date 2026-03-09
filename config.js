@@ -2,10 +2,10 @@ export const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/
 export const EBI_OLS_BASE_URL = 'https://www.ebi.ac.uk/ols4/api';
 
 export const PECO_MAP = {
-    population: { label: "Population", color: "#E91E63", purpose: "a population group (e.g., human, animal model), focusing on MeSH trees for 'Persons', 'Age Groups', or 'Organisms'" },
-    exposure: { label: "Exposure", color: "#4CAF50", purpose: "a pharmacological, therapeutic, or environmental intervention/exposure, focusing on the 'Chemicals and Drugs', 'Therapeutics', or 'Phenomena and Processes' MeSH trees" },
-    comparison: { label: "Comparator", color: "#00BCD4", purpose: "a pharmacological, therapeutic, or environmental intervention, focusing on the 'Chemicals and Drugs', 'Therapeutics', or 'Phenomena and Processes' MeSH trees" },
-    outcome: { label: "Outcome", color: "#FFC107", purpose: "a clinical, toxicological, or biological endpoint, sign, or symptom, focusing on MeSH trees for 'Signs and Symptoms', 'Pathological Conditions', or 'Therapeutic Outcomes'" }
+    population: { label: "Population", color: "#ec4899", purpose: "a population group (e.g., human, animal model), focusing on MeSH trees for 'Persons', 'Age Groups', or 'Organisms'" },
+    exposure: { label: "Exposure", color: "#22c55e", purpose: "a pharmacological, therapeutic, or environmental intervention/exposure, focusing on the 'Chemicals and Drugs', 'Therapeutics', or 'Phenomena and Processes' MeSH trees" },
+    comparison: { label: "Comparator", color: "#06b6d4", purpose: "a pharmacological, therapeutic, or environmental intervention, focusing on the 'Chemicals and Drugs', 'Therapeutics', or 'Phenomena and Processes' MeSH trees" },
+    outcome: { label: "Outcome", color: "#eab308", purpose: "a clinical, toxicological, or biological endpoint, sign, or symptom, focusing on MeSH trees for 'Signs and Symptoms', 'Pathological Conditions', or 'Therapeutic Outcomes'" }
 };
 
 export const MODE_CONFIG = {

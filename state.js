@@ -11,6 +11,9 @@ export const appState = {
     aiBaseUrl: localStorage.getItem('peco_buddy_ai_base_url') || '',
     aiModel: localStorage.getItem('peco_buddy_ai_model') || '',
     globalApiKey: localStorage.getItem('peco_buddy_api_key') || '', 
+    
+    // General Settings
+    stripMetadata: localStorage.getItem('peco_buddy_strip_metadata') === 'true',
 
     authorWorkflow: {
         currentStep: 'step-ideation',
@@ -29,7 +32,7 @@ export const appState = {
             strengths: [], 
             appliedSuggestions: {}, 
             isAnalysisCollapsed: false, 
-            analysisDepth: 'intermediate', // 'quick', 'intermediate', 'thorough'
+            analysisDepth: 'standard', // 'standard', 'thorough'
             frozenComponents: {
                 population: false,
                 exposure: false,

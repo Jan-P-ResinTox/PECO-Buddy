@@ -189,7 +189,7 @@ function getApiKey() {
 export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer, config = {}) => {
   const prompt = `Generate 3 research questions for a ${studyType} based on: "${scope}". 
   CRITICAL:
-  - Each "full_statement" MUST be a direct research statement (e.g. "The effect of prenatal lead exposure...").
+  - Each "full_statement" MUST be a direct research question ending with a question mark (e.g. "What is the effect of prenatal lead exposure on...?", "Does X cause Y?").
   - DO NOT use conversational or advisory phrasing like "Have you considered", "One thought is", or "Could it be useful to".
   - Use linguistic matrix tags {matrix:connector:term} for biological samples.
   Return JSON with a "questions" array containing: full_statement, population, exposure, comparison, outcome.`;
@@ -251,7 +251,8 @@ export const callQuestionQualityAPI = async (question, peco, statusContainer, co
   - "refined_term": Must be a single Minimal Conceptual Unit (e.g. "Sprague-Dawley Rats", "Lead acetate 10mg/kg", "IQ scores at 24 months"). 
   - PREFER specific parameters (doses, concentrations, timeframes, specific strains) over broad categories.
   - "advisory_message": Provide a detailed, elaborate scientific justification (3-5 sentences). Explain exactly how the refined term reduces ambiguity and why the current term is linguistically or scientifically unresolved.
-  - Tone: Constructive Linguistic Professor.
+  - "counter_consideration": Explain why this suggestion might NOT be appropriate in certain contexts or how it might inadvertently limit the scope or quality if applied incorrectly.
+  - Tone: Humble and advisory. Use phrases like "Could it be better if...", "Have you considered...", "If you are looking for [x], then [y] could improve [z]". Avoid deterministic or commanding language.
   - Return JSON.`;
 
   const schema = {
@@ -272,9 +273,10 @@ export const callQuestionQualityAPI = async (question, peco, statusContainer, co
                 properties: {
                     advisory_message: { type: Type.STRING },
                     rationale: { type: Type.STRING },
-                    refined_term: { type: Type.STRING }
+                    refined_term: { type: Type.STRING },
+                    counter_consideration: { type: Type.STRING }
                 },
-                required: ["advisory_message", "rationale", "refined_term"]
+                required: ["advisory_message", "rationale", "refined_term", "counter_consideration"]
               }
             }
           },
