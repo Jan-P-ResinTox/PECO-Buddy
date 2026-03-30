@@ -278,7 +278,10 @@ export const templates = {
                         <div id="settings-config-fields" class="space-y-4">
                             <!-- Gemini Fields -->
                             <div id="field-group-gemini" class="provider-field-group">
-                                <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Gemini API Key</label>
+                                <div class="flex justify-between items-end mb-2">
+                                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Gemini API Key</label>
+                                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-[10px] font-bold text-teal-600 hover:text-teal-700 hover:underline">Get your API-Key here</a>
+                                </div>
                                 <input type="password" id="input-gemini-key" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="Paste Google API Key...">
                             </div>
 

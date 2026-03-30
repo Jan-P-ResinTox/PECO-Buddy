@@ -162,6 +162,77 @@ export const showError = (container, message) => {
 };
 
 export const handleExport = async (contentSelector, format, filename) => {
-    ToastService.show('Finalising export...', 'info');
-    setTimeout(() => ToastService.show(`${format.toUpperCase()} ready for download.`, 'success'), 1000);
+    if (format === 'pdf') {
+        ToastService.show('Preparing document for download...', 'info');
+        try {
+            const element = document.querySelector(contentSelector);
+            if (!element) throw new Error("Content not found");
+
+            // Save original styles of the element and its parent
+            const originalStyle = element.style.cssText;
+            const parent = element.parentElement;
+            const parentOriginalStyle = parent ? parent.style.cssText : '';
+            
+            // Temporarily adjust for rendering to capture full scroll height
+            element.style.width = '800px';
+            element.style.maxWidth = 'none';
+            element.style.height = 'max-content';
+            element.style.maxHeight = 'none';
+            element.style.overflow = 'visible';
+            
+            if (parent) {
+                parent.style.height = 'max-content';
+                parent.style.maxHeight = 'none';
+                parent.style.overflow = 'visible';
+                parent.scrollTop = 0;
+            }
+            element.scrollTop = 0;
+
+            const canvas = await window.html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                windowWidth: 800,
+                scrollY: 0,
+                scrollX: 0
+            });
+
+            // Restore original styles
+            element.style.cssText = originalStyle;
+            if (parent) {
+                parent.style.cssText = parentOriginalStyle;
+            }
+
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+            const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            
+            const imgProps = pdf.getImageProperties(imgData);
+            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+                heightLeft -= pdfHeight;
+            }
+
+            pdf.save(filename || 'export.pdf');
+            ToastService.show('PDF ready for download.', 'success');
+        } catch (error) {
+            console.error(error);
+            ToastService.show('Error generating PDF.', 'error');
+        }
+    } else {
+        ToastService.show('Finalising export...', 'info');
+        setTimeout(() => ToastService.show(`${format.toUpperCase()} ready for download.`, 'success'), 1000);
+    }
 };

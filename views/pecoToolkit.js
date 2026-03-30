@@ -5,7 +5,7 @@ import { PECO_MAP } from '../config.js';
 import * as GeminiAPI from '../api/gemini.js';
 import { runLocalNlpAnalysis } from './nlpToolkit.js';
 import { showModal } from '../components/modal.js';
-import { formatPecoForDisplay, styleMatrices, showLoading, showError, copyTableToClipboard, escapeHtml, stripMetadataFromText } from '../utils.js';
+import { formatPecoForDisplay, styleMatrices, showLoading, showError, copyTableToClipboard, escapeHtml, stripMetadataFromText, handleExport } from '../utils.js';
 import { showTransparencyLogModal } from './reviewPeco.js';
 
 const STUDY_TYPES = [
@@ -710,7 +710,7 @@ const showNanopubReportModal = () => {
         footer.querySelector('.close-trigger').onclick = close;
         footer.querySelector('#modal-copy-btn').onclick = () => copyTableToClipboard('#report-peco-table');
         footer.querySelector('#modal-json-btn').onclick = () => downloadPecoJson();
-        footer.querySelector('#modal-pdf-btn').onclick = () => ToastService.show("Preparing document for download...", "info");
+        footer.querySelector('#modal-pdf-btn').onclick = () => handleExport('.report-modal-container', 'pdf', 'peco-final-report.pdf');
         
         container.appendChild(footer);
     }, true);
