@@ -110,10 +110,6 @@ export const templates = {
             <div id="ideation-phase-study-type" class="animate-fade-in space-y-10">
                 <div class="flex justify-between items-center">
                     <label class="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest">Study Methodology</label>
-                    <div class="flex gap-4">
-                        <button id="toggle-basic-types" class="px-6 py-2 text-[12px] font-extrabold uppercase tracking-wider rounded-xl transition-all bg-white text-teal-600 shadow-sm">Core Types</button>
-                        <button id="toggle-extended-types" class="px-6 py-2 text-[12px] font-extrabold uppercase tracking-wider rounded-xl transition-all text-slate-500 hover:text-slate-800">Extended</button>
-                    </div>
                 </div>
                 <div id="study-type-selector"></div>
             </div>
@@ -129,25 +125,25 @@ export const templates = {
             <div id="analysis-control-hub" class="bg-white p-12 rounded-[3rem] border shadow-sm">
                 <div class="flex justify-between items-center mb-10">
                    <h4 class="text-[12px] font-extrabold uppercase text-slate-400 tracking-widest flex items-center gap-3">
-                        <i class="fa-solid fa-brain text-teal-600"></i> Audit Logic Control
+                        <i class="fa-solid fa-brain text-teal-600"></i> Refine PECO Components
                     </h4>
                     <div class="depth-selector" id="depth-selector-group">
+                        <button class="depth-btn" data-depth="fast">Fast</button>
                         <button class="depth-btn active" data-depth="standard">Standard</button>
-                        <button class="depth-btn" data-depth="thorough">Thorough</button>
                     </div>
-                    <p class="text-[10px] text-slate-400 font-bold mt-3 text-right uppercase tracking-widest">Thorough = Standard + Reasoning</p>
+                    <p class="text-[10px] text-slate-400 font-bold mt-3 text-right uppercase tracking-widest">Fast is without Reasoning</p>
+                </div>
+                <div id="clarity-statement-section" class="mb-8">
+                    <label class="block text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-4">Research Question (Read Only)</label>
+                    <div id="research-question-display" class="w-full text-lg font-bold p-8 rounded-[2rem] border bg-slate-50/50 italic leading-relaxed shadow-inner min-h-[100px]"></div>
                 </div>
                 <div class="flex flex-col gap-8">
                     <button id="score-clarity-btn" class="w-full bg-teal-600 text-white py-6 rounded-[2.5rem] font-extrabold uppercase text-xs tracking-widest shadow-lg hover:bg-teal-700 transition-all flex items-center justify-center gap-4">
-                        <i class="fa-solid fa-play"></i> Analyse
+                        <i class="fa-solid fa-play"></i> Re-Analyse
                     </button>
                 </div>
             </div>
             <div id="clarity-dashboard-container"></div>
-            <div id="clarity-statement-section" class="bg-white p-12 rounded-[3rem] border shadow-sm">
-                <label class="block text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Research Question (Read Only)</label>
-                <div id="research-question-display" class="w-full text-xl font-bold p-10 rounded-[2rem] border bg-slate-50/50 italic leading-relaxed shadow-inner min-h-[140px]"></div>
-            </div>
             <div id="clarity-footer-container"></div>
         </div>
     `,
@@ -157,7 +153,7 @@ export const templates = {
                 <div class="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-sm">
                     <i class="fa-solid fa-award fa-4x"></i>
                 </div>
-                <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight">Final Protocol Summary</h2>
+                <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight">Final PECO Question</h2>
                 <div id="final-question-display" class="text-2xl font-bold italic text-slate-700 leading-relaxed bg-slate-50 p-12 rounded-[2.5rem] border border-slate-100 shadow-inner"></div>
             </div>
             <div id="final-peco-display"></div>
@@ -346,34 +342,94 @@ export const templates = {
         </div>
     `,
     userManualView: `
-        <div class="manual-container space-y-12 pb-12">
-            <header class="p-8 bg-slate-50 border-b">
-                <h4 class="text-xl font-extrabold text-slate-800 mb-4">How to use PECO-Buddy</h4>
-                <div class="relative">
-                    <input type="text" id="manual-search-input" class="w-full pl-10 pr-4 py-3 bg-white border rounded-xl text-sm" placeholder="Search the manual...">
+        <div class="flex h-[70vh] overflow-hidden bg-white rounded-b-2xl">
+            <!-- Sidebar Navigation -->
+            <div class="w-1/3 bg-slate-50 border-r border-slate-200 overflow-y-auto p-6 space-y-2 shrink-0">
+                <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-6 px-2">Manual Sections</h4>
+                <a href="#manual-intro" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">1. Welcome to PECO-Buddy!</a>
+                <a href="#manual-step1" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">2. Step 1: Brainstorming (Ideation)</a>
+                <a href="#manual-step2" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">3. Step 2: Checking the Work (Logic Audit)</a>
+                <a href="#manual-step3" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">4. Step 3: The Final Result (Outputs)</a>
+                <a href="#manual-nlp" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">5. The Vocabulary Manager (NLP Toolkit)</a>
+                <a href="#manual-settings" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">6. Settings & Rules</a>
+            </div>
+            
+            <!-- Main Content Area -->
+            <div class="w-2/3 overflow-y-auto p-8 space-y-12 scroll-smooth">
+                <div class="relative mb-8">
+                    <input type="text" id="manual-search-input" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Search the manual...">
                     <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                 </div>
-            </header>
-            <div class="px-8 space-y-8">
-                <section class="manual-section">
-                    <h5 class="text-sm font-extrabold text-teal-600 uppercase tracking-widest mb-4">Step 1: Ideation</h5>
-                    <p class="text-slate-600 text-sm leading-relaxed">Enter your broad research interest and select a study methodology. PECO-Buddy will generate structured research question candidates that identify Population, Exposure, Comparator, and Outcome.</p>
+
+                <section id="manual-intro" class="manual-section space-y-4">
+                    <h5 class="text-xl font-extrabold text-teal-600">1. Welcome to PECO-Buddy!</h5>
+                    <p class="text-slate-600 text-sm leading-relaxed">Hello! Think of PECO-Buddy as your super-smart science helper. When scientists want to study something (like if a new medicine works, or if a certain chemical is bad for you), they need a very clear question. We use a trick called <strong>PECO</strong> to make these questions perfect.</p>
+                    <ul class="list-disc pl-5 text-slate-600 text-sm space-y-2">
+                        <li><strong>P</strong> is for <strong>Population</strong>: Who or what are we studying? (Like "mice" or "adult humans").</li>
+                        <li><strong>E</strong> is for <strong>Exposure</strong>: What are they coming into contact with? (Like "eating lots of sugar" or "a new medicine").</li>
+                        <li><strong>C</strong> is for <strong>Comparator</strong>: What are we comparing them to? (Like "people who eat no sugar" or "a fake medicine").</li>
+                        <li><strong>O</strong> is for <strong>Outcome</strong>: What happens at the end? (Like "getting a stomach ache" or "feeling better").</li>
+                    </ul>
+                    <p class="text-slate-600 text-sm leading-relaxed">PECO-Buddy helps you build these pieces step-by-step so your science project starts off on the right foot!</p>
                 </section>
-                <section class="manual-section">
-                    <h5 class="text-sm font-extrabold text-teal-600 uppercase tracking-widest mb-4">Step 2: Logic Audit</h5>
-                    <p class="text-slate-600 text-sm leading-relaxed">Once a question is developed, run the logic audit. The AI Co-Author evaluates the protocol for scientific rigor and linguistic precision, suggesting improvements using matrix tags for biological sites.</p>
+
+                <section id="manual-step1" class="manual-section space-y-4">
+                    <h5 class="text-xl font-extrabold text-teal-600">2. Step 1: Brainstorming (Ideation)</h5>
+                    <p class="text-slate-600 text-sm leading-relaxed">This is where we start! You just need a basic idea.</p>
+                    <ol class="list-decimal pl-5 text-slate-600 text-sm space-y-2">
+                        <li><strong>Type your idea:</strong> In the big text box, type what you are curious about. For example: "Does eating carrots make your eyesight better?"</li>
+                        <li><strong>Pick a Study Type:</strong> Choose how you want to study this. Are you looking at animals (In Vivo), cells in a dish (In Vitro), or human populations (Epidemiological)?</li>
+                        <li><strong>Click "Generate PECO Questions":</strong> PECO-Buddy will think hard and give you 3 really good, scientific ways to ask your question.</li>
+                        <li><strong>Pick your favorite:</strong> Read the 3 options and click "Select & Continue" on the one you like best!</li>
+                    </ol>
                 </section>
-                <section class="manual-section">
-                    <h5 class="text-sm font-extrabold text-teal-600 uppercase tracking-widest mb-4">Step 3: Outputs</h5>
-                    <p class="text-slate-600 text-sm leading-relaxed">Finalise your PECO table and synthesise the final research statement. You can export the transparency log to see exactly how the AI reached its conclusions.</p>
+
+                <section id="manual-step2" class="manual-section space-y-4">
+                    <h5 class="text-xl font-extrabold text-teal-600">3. Step 2: Checking the Work (Logic Audit)</h5>
+                    <p class="text-slate-600 text-sm leading-relaxed">Now that we have a good question, we need to make sure it's perfect. PECO-Buddy will act like a strict teacher and check our work.</p>
+                    <ol class="list-decimal pl-5 text-slate-600 text-sm space-y-2">
+                        <li><strong>Run the Audit:</strong> Click the button to start the check. PECO-Buddy will look at your Population, Exposure, Comparator, and Outcome.</li>
+                        <li><strong>Read the Feedback:</strong> PECO-Buddy will give you a score and tell you what is good and what needs fixing. It might say, "You said 'eyesight', but you need to be more specific, like 'visual acuity'."</li>
+                        <li><strong>Look at Suggestions:</strong> For each part (P, E, C, O), PECO-Buddy will give you new, better words to use. You can click the left and right arrows to see different ideas.</li>
+                        <li><strong>Sync the best ideas:</strong> If you like PECO-Buddy's ideas, click "Sync All to Protocol" to update your question with the new, fancy science words!</li>
+                    </ol>
+                </section>
+
+                <section id="manual-step3" class="manual-section space-y-4">
+                    <h5 class="text-xl font-extrabold text-teal-600">4. Step 3: The Final Result (Outputs)</h5>
+                    <p class="text-slate-600 text-sm leading-relaxed">You did it! This is the final step where you get your shiny, new science question.</p>
+                    <ul class="list-disc pl-5 text-slate-600 text-sm space-y-2">
+                        <li><strong>Review Final Output:</strong> Click this button at the bottom of Step 2 to come here.</li>
+                        <li><strong>See your Question:</strong> You will see your final, perfect research question in a big box.</li>
+                        <li><strong>Full Transparency Report:</strong> Click this button to see a detailed report of everything you and PECO-Buddy did. It shows your final question, your PECO table, and a log of all the steps. You can even download this report to show your teacher or friends!</li>
+                    </ul>
+                </section>
+
+                <section id="manual-nlp" class="manual-section space-y-4">
+                    <h5 class="text-xl font-extrabold text-teal-600">5. The Vocabulary Manager (NLP Toolkit)</h5>
+                    <p class="text-slate-600 text-sm leading-relaxed">Sometimes you don't want to use the AI to check your work. Instead, you can create your very own dictionary of science words! This is called the NLP Toolkit.</p>
+                    <ul class="list-disc pl-5 text-slate-600 text-sm space-y-2">
+                        <li><strong>Add Words:</strong> Type in words (like "mice" or "lead") and tell PECO-Buddy if they belong to Population, Exposure, Comparator, or Outcome.</li>
+                        <li><strong>Build Your Rules:</strong> You can add as many words as you want to build a big list of rules. You can even import or export your lists to share with friends!</li>
+                        <li><strong>Use Your Dictionary:</strong> If you go to Settings and change your "Scientific Engine" to "NLP Vocabulary", PECO-Buddy will stop using the AI. Instead, it will only look for the exact words you put in this dictionary when checking your question in Step 2!</li>
+                    </ul>
+                </section>
+
+                <section id="manual-settings" class="manual-section space-y-4">
+                    <h5 class="text-xl font-extrabold text-teal-600">6. Settings & Rules</h5>
+                    <p class="text-slate-600 text-sm leading-relaxed">Want to change how PECO-Buddy works? Click "Settings" in the left menu.</p>
+                    <ul class="list-disc pl-5 text-slate-600 text-sm space-y-2">
+                        <li><strong>General Tab:</strong> Here you can change the text size (make it bigger or smaller) and choose how much help you want from the AI (from "Novice" where it helps a lot, to "Expert" where it just gives quick tips).</li>
+                        <li><strong>Heuristics & Controls Tab:</strong> This is for advanced users! You can give PECO-Buddy special rules to follow when it checks your work. For example, you can tell it to always make sure the "Exposure" is measured in a specific way.</li>
+                    </ul>
                 </section>
             </div>
         </div>
     `,
     versionRationaleView: `
         <div class="p-8 space-y-6">
-            <h4 class="text-xl font-extrabold text-slate-800">Version 8.1.3 Rationale</h4>
-            <p class="text-sm text-slate-600 leading-relaxed">Version 8.1.3 focuses on **Augmented Intelligence** - the principle that the machine should guide, not replace, human scientific judgement. Key architectural changes include:</p>
+            <h4 class="text-xl font-extrabold text-slate-800">Public Beta 0.1 Rationale</h4>
+            <p class="text-sm text-slate-600 leading-relaxed">Public Beta 0.1 focuses on **Augmented Intelligence** - the principle that the machine should guide, not replace, human scientific judgement. Key architectural changes include:</p>
             <ul class="list-disc pl-6 text-sm text-slate-600 space-y-4">
                 <li><strong>Linguistic Matrix Syntax:</strong> Explicit deconstruction of measurement sites using the {matrix:connector:term} pattern ensures standardisation.</li>
                 <li><strong>Traceable Reasoning:</strong> Every AI interaction is logged and downloadable, meeting EBTC transparency requirements.</li>
@@ -386,7 +442,7 @@ export const templates = {
     copyrightView: `
         <div class="p-8 space-y-6">
             <h4 class="text-xl font-extrabold text-slate-800">Copyright & Licence</h4>
-            <p class="text-sm text-slate-600 leading-relaxed font-bold">Copyright (c) 2025 Evidence-Based Toxicology Collaboration</p>
+            <p class="text-sm text-slate-600 leading-relaxed font-bold">Copyright (c) 2025 All Rights Reserved in Accordance to The Terms Herein</p>
 
             <div class="space-y-2">
                 <h5 class="text-xs font-extrabold uppercase tracking-widest text-slate-500">Concept and Development</h5>
@@ -410,13 +466,13 @@ export const templates = {
                  <h5 class="font-bold text-rose-700 uppercase text-xs tracking-widest mt-6">Prohibitions</h5>
                  <p class="text-rose-700 font-medium">Without permission granted from the author of the software, the following actions are expressly forbidden:</p>
                  <ul class="list-disc pl-5 space-y-2 text-rose-700">
-                    <li>You may NOT, outside the EBTC-Workgroups - or as an invited party - disclose, take screenshots, hand out website address, translate, or in any digital or analogue media or form, record any of the core processes or functions that you may gain knowledge of.</li>
+                    <li>You may NOT, as a user - or as an invited party - disclose, take screenshots, hand out hosting website address, translate, or in any digital or analogue media or form, record any of the core processes or functions or code of this Software that you may gain knowledge of.</li>
                     <li>You may NOT distribute, modify, adapt, translate, or create derivative works based on the Software's source code.</li>
                     <li>You may NOT decompile, reverse engineer, disassemble, or otherwise attempt to derive the source code for the Software.</li>
                     <li>You may NOT merge or incorporate the Software or its source code into any other software.</li>
                  </ul>
 
-                 <p class="text-xs font-bold text-slate-400 mt-6 uppercase">THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+                 <p class="text-xs font-bold text-slate-400 mt-6 uppercase">THIS VERSION OF THE BETA TESTING SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
             </div>
         </div>
     `

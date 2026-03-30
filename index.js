@@ -8,7 +8,7 @@ import { initReviewerToolkitView } from './views/reviewPeco.js';
 import { initNlpToolkitView } from './views/nlpToolkit.js';
 
 /**
- * Main application entry point for PECO-Buddy.
+ * Main application entry point for PECO-Buddy Public Beta 0.1.
  * Manages view routing, sidebar interactions, and global settings.
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showUserManual = () => {
-            showModal('User Manual v8.2 Beta', `<div class="modal-body p-6">${templates.userManualView}</div>`, (modal) => {
+            showModal('User Manual Public Beta 0.1', `<div class="modal-body p-0">${templates.userManualView}</div>`, (modal) => {
                 const searchInput = modal.querySelector('#manual-search-input');
                 const sections = modal.querySelectorAll('.manual-section');
                 if (searchInput) {
@@ -367,6 +367,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+
+        // Tooltip logic
+        const tooltipEl = getEl('global-tooltip');
+        let tooltipTimeout;
+
+        document.addEventListener('mouseover', (e) => {
+            const target = e.target.closest('[data-tooltip]');
+            if (target && tooltipEl) {
+                clearTimeout(tooltipTimeout);
+                const text = target.getAttribute('data-tooltip');
+                tooltipEl.textContent = text;
+                tooltipEl.classList.remove('hidden');
+                
+                const rect = target.getBoundingClientRect();
+                const tooltipRect = tooltipEl.getBoundingClientRect();
+                
+                let top = rect.top - tooltipRect.height - 10;
+                let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                
+                if (top < 0) top = rect.bottom + 10;
+                if (left < 0) left = 10;
+                if (left + tooltipRect.width > window.innerWidth) left = window.innerWidth - tooltipRect.width - 10;
+                
+                tooltipEl.style.top = `${top + window.scrollY}px`;
+                tooltipEl.style.left = `${left + window.scrollX}px`;
+                tooltipEl.style.opacity = '1';
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const target = e.target.closest('[data-tooltip]');
+            if (target && tooltipEl) {
+                tooltipEl.style.opacity = '0';
+                tooltipTimeout = setTimeout(() => {
+                    tooltipEl.classList.add('hidden');
+                }, 150);
+            }
+        });
 
         // Initial render
         setMode('peco_toolkit');

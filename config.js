@@ -9,7 +9,7 @@ export const PECO_MAP = {
 };
 
 export const MODE_CONFIG = {
-    peco_toolkit: { title: "PECO Toolkit", subtitle: "A guided workflow from concept to PECO analysis" },
+    peco_toolkit: { title: "PECO Toolkit", subtitle: "A guided workflow from concept to A Final PECO Question" },
     review_peco: { title: "Review PECO", subtitle: "Tools for manuscript consistency auditing" },
     nlp: { title: "NLP Toolkit", subtitle: "Manage custom term lists for local analysis" }
 };

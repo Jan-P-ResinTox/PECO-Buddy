@@ -286,7 +286,7 @@ export function showTransparencyLogModal() {
                 <p class="text-sm text-slate-600 mb-4">This log contains the complete semantic interaction trail used to generate the current session content.</p>
                 <div class="flex gap-4">
                     <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Total Steps: ${appState.interactionLog.length}</div>
-                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Engine: PECO-Buddy 8.1.3</div>
+                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Engine: PECO-Buddy Public Beta 0.1</div>
                 </div>
             </div>
             <div class="bg-white">
@@ -388,7 +388,7 @@ function renderAuditSynthesis(data, container) {
 
             <div class="mt-10 pt-8 border-t flex flex-wrap justify-between items-center gap-6">
                 <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <i class="fa-solid fa-shield-halved text-teal-600"></i> Audit Report | Engine: PECO-Buddy 8.1.3
+                    <i class="fa-solid fa-shield-halved text-teal-600"></i> Audit Report | Engine: PECO-Buddy Public Beta 0.1
                 </div>
                 <div class="flex gap-3">
                     <button id="show-transparency-log-btn" class="bg-white border border-slate-200 text-slate-600 font-extrabold py-3 px-6 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"><i class="fa-solid fa-code"></i> Extended Transparency</button>

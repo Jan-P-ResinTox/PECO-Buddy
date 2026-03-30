@@ -8,27 +8,15 @@ import { showModal } from '../components/modal.js';
 import { formatPecoForDisplay, styleMatrices, showLoading, showError, copyTableToClipboard, escapeHtml, stripMetadataFromText } from '../utils.js';
 import { showTransparencyLogModal } from './reviewPeco.js';
 
-const BASIC_STUDY_TYPES = [
-    { id: 'systematic_review', name: 'Systematic Review', icon: 'fa-magnifying-glass-chart' },
-    { id: 'meta_analysis', name: 'Meta-Analysis', icon: 'fa-chart-line' },
-    { id: 'rct', name: 'RCT', icon: 'fa-vials' },
-    { id: 'cohort_prospective', name: 'Prospective Cohort', icon: 'fa-users-line' },
-    { id: 'cohort_retrospective', name: 'Retrospective Cohort', icon: 'fa-users-viewfinder' },
-    { id: 'case_control', name: 'Case-Control Study', icon: 'fa-user-group' },
-    { id: 'animal_study', name: 'Controlled Animal (In Vivo)', icon: 'fa-paw' },
-    { id: 'in_vitro', name: 'Cell Culture (In Vitro)', icon: 'fa-microscope' }
-];
-
-const EXTENDED_STUDY_TYPES = [
-    { id: 'cluster_rct', name: 'Cluster RCT', icon: 'fa-people-roof' },
-    { id: 'non_rct', name: 'Non-Randomised Trial', icon: 'fa-vial-circle-check' },
-    { id: 'quasi_experimental', name: 'Quasi-Experimental', icon: 'fa-flask-vial' },
-    { id: 'nested_case_control', name: 'Nested Case-Control', icon: 'fa-layer-group' },
-    { id: 'cross_sectional', name: 'Cross-Sectional', icon: 'fa-chart-pie' },
-    { id: 'ecological', name: 'Ecological Study', icon: 'fa-earth-americas' },
-    { id: 'ex_vivo', name: 'Ex Vivo Study', icon: 'fa-dna' },
-    { id: 'in_silico', name: 'Computational Model', icon: 'fa-laptop-code' },
-    { id: 'case_series', name: 'Case Series / Report', icon: 'fa-clipboard-user' }
+const STUDY_TYPES = [
+    { id: 'systematic_review', name: 'Systematic Review', icon: 'fa-magnifying-glass-chart', tooltip: 'Select this if you are planning to summarize existing research on a specific topic.' },
+    { id: 'rct', name: 'RCT', icon: 'fa-vials', tooltip: 'Select this if you are planning an experiment where participants are randomly assigned to different groups.' },
+    { id: 'cohort', name: 'Cohort Study', icon: 'fa-users-line', tooltip: 'Select this if you are planning to follow a group of people over time to observe outcomes.' },
+    { id: 'case_control', name: 'Case-Control Study', icon: 'fa-user-group', tooltip: 'Select this if you are planning to compare people with a specific outcome to those without it.' },
+    { id: 'animal_study', name: 'Animal Study', icon: 'fa-paw', tooltip: 'Select this if you are planning an experiment using animal models.' },
+    { id: 'in_vitro', name: 'In Vitro Study', icon: 'fa-microscope', tooltip: 'Select this if you are planning an experiment using cells or tissues in a lab setting.' },
+    { id: 'cross_sectional', name: 'Cross-Sectional', icon: 'fa-chart-pie', tooltip: 'Select this if you are planning to analyze data from a population at a specific point in time.' },
+    { id: 'case_series', name: 'Case Series / Report', icon: 'fa-clipboard-user', tooltip: 'Select this if you are planning to describe a single patient or a small group of patients.' }
 ];
 
 export const initAuthorToolkitFlow = () => {
@@ -131,15 +119,10 @@ function initIdeationView(container) {
   const resultsContainer = container.querySelector('#ideation-results-container');
   const studyTypeSelector = container.querySelector('#study-type-selector');
   const studyTypePhase = container.querySelector('#ideation-phase-study-type');
-  const toggleBasic = container.querySelector('#toggle-basic-types');
-  const toggleExtended = container.querySelector('#toggle-extended-types');
-
-  let activeFilter = 'basic'; 
 
   const renderStudyTypes = () => {
-    const list = activeFilter === 'basic' ? BASIC_STUDY_TYPES : EXTENDED_STUDY_TYPES;
-    studyTypeSelector.innerHTML = list.map(st => `
-        <button class="study-type-btn ${appState.authorWorkflow.ideationData.selectedStudyType?.id === st.id ? 'active' : ''}" data-id="${st.id}" data-name="${st.name}">
+    studyTypeSelector.innerHTML = STUDY_TYPES.map(st => `
+        <button class="study-type-btn ${appState.authorWorkflow.ideationData.selectedStudyType?.id === st.id ? 'active' : ''}" data-id="${st.id}" data-name="${st.name}" data-tooltip="${st.tooltip}">
           <i class="fa-solid ${st.icon} text-teal-600"></i>
           <span class="text-[12px] font-bold uppercase tracking-widest text-center">${st.name}</span>
         </button>
@@ -160,20 +143,6 @@ function initIdeationView(container) {
   scopeInput.oninput = () => {
     appState.authorWorkflow.ideationData.scopeText = scopeInput.value;
     updateUI();
-  };
-
-  toggleBasic.onclick = () => {
-    activeFilter = 'basic';
-    toggleBasic.className = "px-6 py-2 text-[12px] font-extrabold uppercase tracking-wider rounded-xl transition-all bg-white text-teal-600 shadow-sm";
-    toggleExtended.className = "px-6 py-2 text-[12px] font-extrabold uppercase tracking-wider rounded-xl transition-all text-slate-500 hover:text-slate-800";
-    renderStudyTypes();
-  };
-
-  toggleExtended.onclick = () => {
-    activeFilter = 'extended';
-    toggleExtended.className = "px-6 py-2 text-[12px] font-extrabold uppercase tracking-wider rounded-xl transition-all bg-white text-teal-600 shadow-sm";
-    toggleBasic.className = "px-6 py-2 text-[12px] font-extrabold uppercase tracking-wider rounded-xl transition-all text-slate-500 hover:text-slate-800";
-    renderStudyTypes();
   };
 
   studyTypeSelector.onclick = (e) => {
@@ -248,6 +217,7 @@ function initIdeationView(container) {
       btn.onclick = () => {
         const q = appState.authorWorkflow.ideationData.generatedSuggestions[btn.dataset.index];
         appState.authorWorkflow.clarityData.researchQuestion = q.full_statement;
+        appState.authorWorkflow.clarityData.analysis = null; // Clear previous analysis to trigger auto-run
         appState.authorWorkflow.liveCoAuthorData.peco = { population: q.population || '', exposure: q.exposure || '', comparison: q.comparison || '', outcome: q.outcome || '' };
         jumpToStep('step-clarity');
       };
@@ -298,7 +268,10 @@ function initClarityView(container) {
   const runAnalysis = async (isRefresh = false) => {
     if (!isRefresh) {
         scoreBtn.disabled = true;
-        scoreBtn.innerHTML = '<div class="loader inline-block"></div> ANALYSING...';
+        scoreBtn.innerHTML = '<div class="loader inline-block"></div> <span class="animate-pulse">ANALYSING...</span>';
+    } else {
+        scoreBtn.disabled = true;
+        scoreBtn.innerHTML = '<div class="loader inline-block"></div> <span class="animate-pulse">RE-ANALYSING...</span>';
     }
 
     try {
@@ -328,7 +301,7 @@ function initClarityView(container) {
           showProgressGauge(dashboardContainer, isRefresh ? 'Re-analysing Logic Strategy...' : 'Analysing Logic Structure...', 15, "Extracting Semantic Domains");
           
           const config = { seed: appState.globalSeed };
-          if (appState.authorWorkflow.clarityData.analysisDepth === 'thorough') config.thinkingConfig = { thinkingBudget: 2048 };
+          if (appState.authorWorkflow.clarityData.analysisDepth === 'standard') config.thinkingConfig = { thinkingBudget: 2048 };
           
           const contextLogic = await GeminiAPI.callContextLogicEngineAPI(q);
           showProgressGauge(dashboardContainer, 'Deconstructing Linguistic Syntax...', 50, "Scanning Context");
@@ -347,7 +320,7 @@ function initClarityView(container) {
     } catch(e) { showError(dashboardContainer, e.message); }
     finally {
         scoreBtn.disabled = false;
-        scoreBtn.innerHTML = '<i class="fa-solid fa-play"></i> Analyse';
+        scoreBtn.innerHTML = '<i class="fa-solid fa-play"></i> Re-Analyse';
     }
   };
 
@@ -384,7 +357,7 @@ function initClarityView(container) {
       <div class="bg-white p-8 md:p-14 rounded-[3.5rem] border shadow-sm">
         <div class="flex justify-between items-center mb-10 px-4">
           <div class="flex flex-col gap-1">
-            <h4 class="text-sm font-extrabold uppercase text-slate-400 tracking-widest">Scientific Advisory Feed</h4>
+            <h4 class="text-sm font-extrabold uppercase text-slate-400 tracking-widest">Suggested Refinement</h4>
             <div class="flex gap-2 mt-2">
                 <button id="sync-all-btn" class="text-[10px] font-extrabold text-teal-600 bg-teal-50 px-4 py-2 rounded-xl border border-teal-100 uppercase tracking-widest hover:bg-teal-100 transition-colors">
                     <i class="fa-solid fa-arrows-rotate mr-2"></i> Update Research Question
@@ -475,11 +448,15 @@ function initClarityView(container) {
                                     </div>
                                     ${suggestions.length > 1 ? `
                                     <div class="flex justify-between items-center mt-2 px-2">
-                                        <button class="carousel-prev text-slate-400 hover:text-teal-600 transition-colors p-2" data-component="${key}"><i class="fa-solid fa-chevron-left"></i></button>
-                                        <div class="flex gap-1.5">
-                                            ${suggestions.map((_, dotIdx) => `<span class="carousel-dot w-1.5 h-1.5 rounded-full ${dotIdx === 0 ? 'bg-teal-600' : 'bg-slate-200'} transition-colors"></span>`).join('')}
+                                        <button class="carousel-prev flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-teal-600 transition-colors" data-component="${key}">
+                                            <i class="fa-solid fa-chevron-left"></i> Previous
+                                        </button>
+                                        <div class="text-xs font-bold text-slate-400 tracking-widest">
+                                            <span class="carousel-current-page">1</span> of ${suggestions.length}
                                         </div>
-                                        <button class="carousel-next text-slate-400 hover:text-teal-600 transition-colors p-2" data-component="${key}"><i class="fa-solid fa-chevron-right"></i></button>
+                                        <button class="carousel-next flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-teal-600 transition-colors" data-component="${key}">
+                                            Next <i class="fa-solid fa-chevron-right"></i>
+                                        </button>
                                     </div>
                                     ` : ''}
                                 </div>
@@ -495,7 +472,7 @@ function initClarityView(container) {
 
     footerContainer.innerHTML = `
         <div class="bg-white p-10 rounded-[3.5rem] border shadow-sm flex flex-col md:flex-row justify-end items-center gap-8">
-           <button id="finalise-btn" class="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white px-12 py-5 rounded-3xl font-extrabold uppercase tracking-widest text-[11px] shadow-2xl transition-all">Review Final Protocol &raquo;</button>
+           <button id="finalise-btn" class="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white px-12 py-5 rounded-3xl font-extrabold uppercase tracking-widest text-[11px] shadow-2xl transition-all">Review Final Output &raquo;</button>
         </div>
     `;
 
@@ -517,11 +494,8 @@ function initClarityView(container) {
             slides[activeIdx].classList.remove('active');
             activeIdx = (activeIdx - 1 + slides.length) % slides.length;
             slides[activeIdx].classList.add('active');
-            const dots = carousel.querySelectorAll('.carousel-dot');
-            dots.forEach((d, i) => {
-                d.classList.toggle('bg-teal-600', i === activeIdx);
-                d.classList.toggle('bg-slate-200', i !== activeIdx);
-            });
+            const pageIndicator = carousel.querySelector('.carousel-current-page');
+            if (pageIndicator) pageIndicator.textContent = activeIdx + 1;
         };
     });
 
@@ -534,11 +508,8 @@ function initClarityView(container) {
             slides[activeIdx].classList.remove('active');
             activeIdx = (activeIdx + 1) % slides.length;
             slides[activeIdx].classList.add('active');
-            const dots = carousel.querySelectorAll('.carousel-dot');
-            dots.forEach((d, i) => {
-                d.classList.toggle('bg-teal-600', i === activeIdx);
-                d.classList.toggle('bg-slate-200', i !== activeIdx);
-            });
+            const pageIndicator = carousel.querySelector('.carousel-current-page');
+            if (pageIndicator) pageIndicator.textContent = activeIdx + 1;
         };
     });
 
@@ -636,8 +607,14 @@ function initClarityView(container) {
     };
   };
 
-  scoreBtn.onclick = () => runAnalysis();
-  if (appState.authorWorkflow.clarityData.analysis) renderResults();
+  scoreBtn.onclick = () => runAnalysis(true);
+  
+  // Auto-run analysis if there is a research question and no analysis yet
+  if (appState.authorWorkflow.clarityData.researchQuestion && !appState.authorWorkflow.clarityData.analysis) {
+      runAnalysis(false);
+  } else if (appState.authorWorkflow.clarityData.analysis) {
+      renderResults();
+  }
 }
 
 /**
@@ -648,7 +625,7 @@ const downloadPecoJson = () => {
     const payload = {
         metadata: {
             tool: "PECO-Buddy",
-            version: "8.1.3",
+            version: "Public Beta 0.1",
             timestamp: new Date().toISOString(),
             study_type: appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General'
         },
@@ -677,12 +654,12 @@ const showNanopubReportModal = () => {
     const content = `
         <div class="modal-body p-8 space-y-8">
             <div id="report-content-area" class="bg-teal-50 p-6 rounded-2xl border border-teal-100">
-                <h5 class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 mb-4">Final Protocol Statement</h5>
+                <h5 class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 mb-4">Final Research Question</h5>
                 <div class="bg-white p-6 rounded-xl border mb-6 shadow-sm">
                     <p class="text-sm font-bold text-slate-800 leading-relaxed italic">"${q}"</p>
                 </div>
                 
-                <h5 class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 mb-4">Structural Component Table</h5>
+                <h5 class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 mb-4">Final PECO Components</h5>
                 <table id="report-peco-table" class="w-full text-xs bg-white rounded-xl border border-collapse overflow-hidden shadow-sm">
                     ${Object.keys(PECO_MAP).map(k => `
                         <tr class="border-b last:border-0">
@@ -698,7 +675,7 @@ const showNanopubReportModal = () => {
                 <div class="grid grid-cols-2 gap-4">
                     <div class="p-4 border rounded-xl bg-slate-50">
                         <p class="text-[9px] font-bold text-slate-400 uppercase">Engine</p>
-                        <p class="text-xs font-bold text-slate-700">PECO-Buddy 8.1.3</p>
+                        <p class="text-xs font-bold text-slate-700">PECO-Buddy Public Beta 0.1</p>
                     </div>
                     <div class="p-4 border rounded-xl bg-slate-50">
                         <p class="text-[9px] font-bold text-slate-400 uppercase">Timestamp</p>

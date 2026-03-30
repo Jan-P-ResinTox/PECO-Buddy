@@ -36,7 +36,7 @@ async function callGoogleGemini(prompt, schema, statusContainer, config) {
   
   ADVISORY TONE: Your tone is that of a world-class, constructive Linguistic Professor and Toxicology expert. Use encouraging but rigorous phrasing.` : '';
 
-  const systemInstruction = `You are a world-class Linguistic Professor and Domain Expert in Toxicology and Epidemiology for the EBTC. Your persona is the PECO-Buddy 8.1.3. Your specialty is ensuring scientific precision through semantic clarity.
+  const systemInstruction = `You are a world-class Linguistic Professor and Domain Expert in Toxicology and Epidemiology for the EBTC. Your persona is the PECO-Buddy Public Beta 0.1. Your specialty is ensuring scientific precision through semantic clarity.
   
   CRITICAL: LINGUISTIC SYNTAX RULE (MANDATORY)
   You MUST identify measurement sites, biological matrices, or vehicles and tag them using the {matrix:connector:term} syntax.
@@ -112,7 +112,7 @@ async function callOpenAICompatible(prompt, schema, statusContainer, config) {
     // Construct System Prompt manually since OpenAI API passes it as a message
     const heuristicsBlock = (isAudit) ? `\nAPPLIED HEURISTICS:\n- COMPARATOR: ${h.comparator}\n- EXPOSURE: ${h.exposure}\n- POPULATION: ${h.population}\n- OUTCOME: ${h.outcome}` : '';
     
-    let systemPrompt = `You are a world-class Linguistic Professor and Domain Expert in Toxicology for the EBTC (PECO-Buddy 8.1.3).
+    let systemPrompt = `You are a world-class Linguistic Professor and Domain Expert in Toxicology for the EBTC (PECO-Buddy Public Beta 0.1).
     CRITICAL SYNTAX: Identify measurement sites/matrices and tag them like {matrix:in:maternal blood}.
     ${heuristicsBlock}`;
 
@@ -192,6 +192,7 @@ export const callAdvancedIdeationAPI = async (scope, studyType, statusContainer,
   - Each "full_statement" MUST be a direct research question ending with a question mark (e.g. "What is the effect of prenatal lead exposure on...?", "Does X cause Y?").
   - DO NOT use conversational or advisory phrasing like "Have you considered", "One thought is", or "Could it be useful to".
   - Use linguistic matrix tags {matrix:connector:term} for biological samples.
+  - IMPORTANT: Keep the research questions broad and slightly less specific. They should serve as a starting point for ideation, not a fully refined and highly sophisticated protocol. Leave room for the researcher to specify the exact population, exposure levels, and specific outcomes later.
   Return JSON with a "questions" array containing: full_statement, population, exposure, comparison, outcome.`;
 
   const schema = {
@@ -241,17 +242,24 @@ export const callQuestionQualityAPI = async (question, peco, statusContainer, co
       frozenInstruction = `CRITICAL: The following components are FINALISED by the user: ${JSON.stringify(frozenKeys)}. DO NOT generate any advisory cards or suggestions for these components. Focus your energy on the remaining components.`;
   }
 
+  // Depth Logic
+  const isFast = appState.authorWorkflow.clarityData.analysisDepth === 'fast';
+  const depthInstruction = isFast 
+      ? "FAST MODE: Provide concise advisory messages without deep reasoning or counter-considerations. Focus on direct, actionable refinements."
+      : "STANDARD MODE: Provide a detailed, elaborate scientific justification (3-5 sentences). Explain exactly how the refined term reduces ambiguity and why the current term is linguistically or scientifically unresolved. Include counter-considerations.";
+
   const prompt = `Review protocol: "${question}" using components: ${JSON.stringify(peco)}. 
   Generate 5 to 6 distinct advisory cards per PECO component.
   
   ${guidanceInstruction}
   ${frozenInstruction}
+  ${depthInstruction}
 
   CRITICAL ADVISORY RULES FOR AMBIGUITY REDUCTION:
   - "refined_term": Must be a single Minimal Conceptual Unit (e.g. "Sprague-Dawley Rats", "Lead acetate 10mg/kg", "IQ scores at 24 months"). 
   - PREFER specific parameters (doses, concentrations, timeframes, specific strains) over broad categories.
-  - "advisory_message": Provide a detailed, elaborate scientific justification (3-5 sentences). Explain exactly how the refined term reduces ambiguity and why the current term is linguistically or scientifically unresolved.
-  - "counter_consideration": Explain why this suggestion might NOT be appropriate in certain contexts or how it might inadvertently limit the scope or quality if applied incorrectly.
+  - "advisory_message": ${isFast ? "Briefly state why this refinement is better." : "Provide a detailed, elaborate scientific justification (3-5 sentences). Explain exactly how the refined term reduces ambiguity and why the current term is linguistically or scientifically unresolved."}
+  - "counter_consideration": ${isFast ? "Leave this empty or provide a very brief 1-sentence note." : "Explain why this suggestion might NOT be appropriate in certain contexts or how it might inadvertently limit the scope or quality if applied incorrectly."}
   - Tone: Humble and advisory. Use phrases like "Could it be better if...", "Have you considered...", "If you are looking for [x], then [y] could improve [z]". Avoid deterministic or commanding language.
   - Return JSON.`;
 

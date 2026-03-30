@@ -32,7 +32,7 @@ export const appState = {
             strengths: [], 
             appliedSuggestions: {}, 
             isAnalysisCollapsed: false, 
-            analysisDepth: 'standard', // 'standard', 'thorough'
+            analysisDepth: 'standard', // 'fast', 'standard'
             frozenComponents: {
                 population: false,
                 exposure: false,
