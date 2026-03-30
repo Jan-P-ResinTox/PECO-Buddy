@@ -20,5 +20,6 @@ You may NOT, as a user - or as an invited party - disclose, take screenshots, ha
 You may NOT distribute, modify, adapt, translate, or create derivative works based on the Software's source code.
 You may NOT decompile, reverse engineer, disassemble, or otherwise attempt to derive the source code for the Software.
 You may NOT merge or incorporate the Software or its source code into any other software.
+
 THIS VERSION OF THE BETA TESTING SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
