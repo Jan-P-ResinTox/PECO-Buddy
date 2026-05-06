@@ -11,35 +11,70 @@ import { PECO_MAP } from '../config.js';
  * Uses Gemini-3-Flash for auditing sections of a manuscript for PECO consistency.
  */
 
-const callLinguisticPreprocessorAPI = async (text, sectionName) => {
-    const prompt = `Analyse the following scientific text from the "${sectionName}" section and deconstruct it into its fundamental conceptual parts: "raw_subject", "raw_intervention", "raw_comparison", "raw_outcome". If a component is not mentioned, return an empty string. Text: "${text}"`;
-    const schema = { 
-        type: Type.OBJECT, 
-        properties: { 
-            raw_subject: { type: Type.STRING }, 
-            raw_intervention: { type: Type.STRING }, 
-            raw_comparison: { type: Type.STRING }, 
-            raw_outcome: { type: Type.STRING } 
-        }, 
-        required: ["raw_subject", "raw_intervention", "raw_comparison", "raw_outcome"] 
-    };
-    return await GeminiAPI.callGeminiAPI(prompt, schema);
-};
+const callSovereignExtractorAPI = async (text, sectionName, truthAnchor = null) => {
+    const prohibitionRule = `
+    *** RULE: ZERO-SHOT PROHIBITION IS IN EFFECT ***
+    1. NO INFERENCE: You are strictly forbidden from guessing, inferring, or synthesizing information based on your pre-trained knowledge.
+    2. VERBATIM ONLY: All extracted data must match the text exactly if present.
+    3. MISSING COMPONENTS: If a component is physically missing from the text, you MUST output "Not Specified" (if it's typically expected) or "Not Required" (if the study design inherently lacks it). Do not attempt to fill in the blanks.
+    4. CORE ENTITY ISOLATION: The main PECO fields (population, exposure, comparison, outcome) MUST represent the core biological, conceptual, or physical entity only.
+    5. QUANTIFIER EXTRACTION: Any dosage, threshold, quantile, magnitude, frequency, or severity (e.g., "Top quartile", "5mg/kg", "High levels", "Lower quartiles") MUST be separated and placed into the 'quantifiers_and_modifiers' field. Do not leave them in the main PECO fields.
+    
+    *** CHAIN OF THOUGHT (CoT) ANCHORING ***
+    Before populating the 'extracted_data' fields, you must populate the 'extraction_metadata' object:
+    1. Write out your reasoning for finding the data.
+    2. Extract the exact sentence/paragraph (verbatim quote) from the text where the data resides.
+    3. Only after securing the quote, map the data into the 'extracted_data' object.`;
 
-const callPecoMappingAPI = async (preprocessedData) => {
-    const { raw_subject, raw_intervention, raw_comparison, raw_outcome } = preprocessedData;
-    const prompt = `Assign the following pre-processed components to the correct PECO fields. Ensure the final "exposure" and "comparison" fields DO NOT contain the population/subject. Pre-processed Components: Subject: "${raw_subject}", Intervention/Exposure: "${raw_intervention}", Comparison: "${raw_comparison}", Outcome: "${raw_outcome}"`;
-    const schema = { 
-        type: Type.OBJECT, 
-        properties: { 
-            population: { type: Type.STRING }, 
-            exposure: { type: Type.STRING }, 
-            comparison: { type: Type.STRING }, 
-            outcome: { type: Type.STRING } 
-        }, 
-        required: ["population", "exposure", "comparison", "outcome"] 
+    const anchorRule = truthAnchor ? `\nTRUTH ANCHOR IN EFFECT: Compare extracted data to this stated objective: "${truthAnchor}". Assess semantic drift.` : '';
+
+    const prompt = `Identify and extract strictly DISCRETE PECO components from the following "${sectionName}" text:
+    -----------------------
+    ${text}
+    -----------------------
+    
+    CRITICAL EXTRACTION RULES:
+    ${prohibitionRule}
+    ${anchorRule}
+    - Ensure the final "exposure" and "comparison" fields DO NOT contain the population/subject.
+    - Return ONLY valid JSON matching the schema.`;
+
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            extraction_metadata: {
+                type: Type.OBJECT,
+                properties: {
+                    chain_of_thought_reasoning: { type: Type.STRING },
+                    verbatim_source_quotes: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    semantic_drift_detected: { type: Type.BOOLEAN },
+                    drift_reasoning: { type: Type.STRING }
+                },
+                required: ["chain_of_thought_reasoning", "verbatim_source_quotes"]
+            },
+            extracted_data: {
+                type: Type.OBJECT,
+                properties: {
+                    population: { type: Type.STRING },
+                    exposure: { type: Type.STRING },
+                    comparison: { type: Type.STRING },
+                    outcome: { type: Type.STRING },
+                    quantifiers_and_modifiers: {
+                        type: Type.OBJECT,
+                        properties: {
+                            population_modifiers: { type: Type.STRING },
+                            exposure_modifiers: { type: Type.STRING },
+                            comparison_modifiers: { type: Type.STRING },
+                            outcome_modifiers: { type: Type.STRING }
+                        }
+                    }
+                },
+                required: ["population", "exposure", "comparison", "outcome", "quantifiers_and_modifiers"]
+            }
+        },
+        required: ["extraction_metadata", "extracted_data"]
     };
-    return await GeminiAPI.callGeminiAPI(prompt, schema);
+    return await GeminiAPI.callGeminiAPI(prompt, schema, null, { task: 'extraction', temperature: 0.0 });
 };
 
 export function initReviewerToolkitView() {
@@ -102,16 +137,26 @@ export function initReviewerToolkitView() {
 
                 renderLiveFeedSkeleton(reportContainer, sectionEntries.map(e => e[0]));
 
+                let truthAnchor = null;
                 const sectionPecos = [];
+
                 for (const [sectionName, sectionText] of sectionEntries) {
                     updateSectionStatus(sectionName, 'analysing');
                     
                     try {
-                        const preprocessed = await callLinguisticPreprocessorAPI(sectionText, sectionName);
-                        const peco = await callPecoMappingAPI(preprocessed);
+                        const response = await callSovereignExtractorAPI(sectionText, sectionName, truthAnchor);
+                        const peco = response.extracted_data;
+                        const metadata = response.extraction_metadata;
+
+                        // If this is Abstract or Intro, set the truth anchor based on their verbatim quotes
+                        if (!truthAnchor && (sectionName === 'Abstract' || sectionName === 'Introduction')) {
+                            if (metadata.verbatim_source_quotes && metadata.verbatim_source_quotes.length > 0) {
+                                truthAnchor = metadata.verbatim_source_quotes.join(" ");
+                            }
+                        }
                         
-                        sectionPecos.push({ section: sectionName, peco });
-                        updateSectionResult(sectionName, peco);
+                        sectionPecos.push({ section: sectionName, peco, metadata });
+                        updateSectionResult(sectionName, peco, metadata);
                     } catch (secErr) {
                         console.warn(`Failed to process section ${sectionName}:`, secErr);
                         updateSectionStatus(sectionName, 'failed');
@@ -208,7 +253,7 @@ function renderLiveFeedSkeleton(container, sectionNames) {
     `;
 }
 
-function updateSectionStatus(sectionName, status) {
+function updateSectionStatus(sectionName, status, metadata = null) {
     const row = document.getElementById(`row-${sectionName.toLowerCase()}`);
     if (!row) return;
     const statusCell = row.querySelector('.status-cell');
@@ -222,11 +267,53 @@ function updateSectionStatus(sectionName, status) {
         `;
     } else if (status === 'complete') {
         row.classList.remove('bg-teal-50/30');
+        
+        const btnHtml = metadata ? `
+            <button class="view-metadata-btn ml-2 px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[9px] font-extrabold uppercase transition-colors" data-section="${sectionName}">
+               <i class="fa-solid fa-list-check"></i> Log
+            </button>
+        ` : '';
+
         statusCell.innerHTML = `
-            <div class="inline-flex items-center gap-2 text-[9px] font-bold text-emerald-600 uppercase">
-                <i class="fa-solid fa-circle-check"></i> Complete
+            <div class="flex items-center justify-center gap-2">
+              <div class="inline-flex items-center gap-2 text-[9px] font-bold text-emerald-600 uppercase">
+                  <i class="fa-solid fa-circle-check"></i> Complete
+              </div>
+              ${btnHtml}
             </div>
         `;
+
+        if (metadata) {
+            const btn = statusCell.querySelector('.view-metadata-btn');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    const content = `
+                      <div class="space-y-4">
+                        <div>
+                           <h4 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Chain of Thought</h4>
+                           <p class="text-sm text-slate-700 leading-relaxed">${escapeHtml(metadata.chain_of_thought_reasoning || 'N/A')}</p>
+                        </div>
+                        <div>
+                           <h4 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Verbatim Source Quotes</h4>
+                           <ul class="list-disc list-inside text-sm text-slate-700">
+                             ${(metadata.verbatim_source_quotes || []).map(q => `<li>${escapeHtml(q)}</li>`).join('')}
+                           </ul>
+                        </div>
+                        <div>
+                           <h4 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Drift Detected</h4>
+                           <p class="text-sm text-slate-700">${metadata.semantic_drift_detected ? '<span class="text-rose-600 font-bold">YES</span>' : '<span class="text-emerald-600 font-bold">NO</span>'}</p>
+                        </div>
+                        ${metadata.semantic_drift_detected ? `
+                        <div>
+                           <h4 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Drift Reasoning</h4>
+                           <p class="text-sm text-slate-700 leading-relaxed">${escapeHtml(metadata.drift_reasoning || 'N/A')}</p>
+                        </div>` : ''}
+                      </div>
+                    `;
+                    showModal(`Zero-Shot Audit Log: ${sectionName}`, content, false);
+                });
+            }
+        }
     } else if (status === 'failed') {
         row.classList.remove('bg-teal-50/30', 'bg-emerald-50/30');
         row.classList.add('bg-rose-50/30');
@@ -238,7 +325,7 @@ function updateSectionStatus(sectionName, status) {
     }
 }
 
-function updateSectionResult(sectionName, peco) {
+function updateSectionResult(sectionName, peco, metadata = null) {
     const row = document.getElementById(`row-${sectionName.toLowerCase()}`);
     if (!row) return;
     
@@ -250,7 +337,7 @@ function updateSectionResult(sectionName, peco) {
     if (expCell) expCell.innerHTML = formatPecoForDisplay(peco.exposure);
     if (outCell) outCell.innerHTML = formatPecoForDisplay(peco.outcome);
     
-    updateSectionStatus(sectionName, 'complete');
+    updateSectionStatus(sectionName, 'complete', metadata);
 }
 
 /**
@@ -286,7 +373,7 @@ export function showTransparencyLogModal() {
                 <p class="text-sm text-slate-600 mb-4">This log contains the complete semantic interaction trail used to generate the current session content.</p>
                 <div class="flex gap-4">
                     <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Total Steps: ${appState.interactionLog.length}</div>
-                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Engine: PECO-Buddy Public Beta 0.1</div>
+                    <div class="px-3 py-1 bg-white rounded-lg border text-[10px] font-bold text-slate-500">Engine: PECO-Buddy Public Beta 0.1.1</div>
                 </div>
             </div>
             <div class="bg-white">
@@ -388,7 +475,7 @@ function renderAuditSynthesis(data, container) {
 
             <div class="mt-10 pt-8 border-t flex flex-wrap justify-between items-center gap-6">
                 <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <i class="fa-solid fa-shield-halved text-teal-600"></i> Audit Report | Engine: PECO-Buddy Public Beta 0.1
+                    <i class="fa-solid fa-shield-halved text-teal-600"></i> Audit Report | Engine: PECO-Buddy Public Beta 0.1.1
                 </div>
                 <div class="flex gap-3">
                     <button id="show-transparency-log-btn" class="bg-white border border-slate-200 text-slate-600 font-extrabold py-3 px-6 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"><i class="fa-solid fa-code"></i> Extended Transparency</button>

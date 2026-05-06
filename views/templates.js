@@ -212,7 +212,7 @@ export const templates = {
 
                 <section>
                     <h4 class="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Co-Author Assistance Level</h4>
-                    <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
+                    <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 mb-6">
                         <div class="flex justify-between items-end mb-4">
                             <label for="settings-assistance-slider" class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest">Logic Depth & Rigor</label>
                             <span id="assistance-level-display" class="text-sm font-bold text-teal-600">Standard</span>
@@ -223,6 +223,19 @@ export const templates = {
                             <span>Standard</span>
                             <span>Intense</span>
                         </div>
+                    </div>
+                    <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
+                        <div class="flex justify-between items-end mb-4">
+                            <label for="settings-temperature-slider" class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest">Autonomy & Creativeness (Tether)</label>
+                            <span id="temperature-level-display" class="text-sm font-bold text-teal-600">0.0 (Strict Clerk)</span>
+                        </div>
+                        <input type="range" id="settings-temperature-slider" min="0" max="10" step="1" value="0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-600 mb-2">
+                        <div class="flex justify-between text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                            <span>Strict Clerk (0.0)</span>
+                            <span>Balanced (0.5)</span>
+                            <span>Creative Architect (1.0)</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-4 leading-relaxed">Lower values apply strict "Zero-Shot Prohibition" and tether the model to exact data mimicking a purely clerical parser. Higher values allow creative synthesis and "Dialectical Partner" autonomy for ideation workflows.</p>
                     </div>
                 </section>
                 
@@ -270,8 +283,10 @@ export const templates = {
                             <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Select Provider</label>
                             <select id="settings-provider-select" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-bold outline-none focus:border-teal-500 shadow-sm">
                                 <option value="gemini">Google Gemini (Official)</option>
-                                <option value="openai">OpenAI Compatible (ChatGPT / Perplexity)</option>
-                                <option value="local">Local LLM (Ollama / LM Studio)</option>
+                                <option value="openai">OpenAI (Native)</option>
+                                <option value="anthropic">Anthropic Claude (Native)</option>
+                                <option value="perplexity">Perplexity (Native)</option>
+                                <option value="local">Local LLM / Custom Endpoint</option>
                             </select>
                         </div>
 
@@ -283,6 +298,51 @@ export const templates = {
                                     <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-[10px] font-bold text-teal-600 hover:text-teal-700 hover:underline">Get your API-Key here</a>
                                 </div>
                                 <input type="password" id="input-gemini-key" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="Paste Google API Key...">
+                            </div>
+
+                            <!-- OpenAI Fields -->
+                            <div id="field-group-openai" class="provider-field-group hidden space-y-4">
+                                <div>
+                                    <div class="flex justify-between items-end mb-2">
+                                        <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">OpenAI API Key</label>
+                                        <a href="https://platform.openai.com/api-keys" target="_blank" class="text-[10px] font-bold text-teal-600 hover:text-teal-700 hover:underline">Get your API-Key here</a>
+                                    </div>
+                                    <input type="password" id="input-openai-key" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="Paste OpenAI API Key...">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Model Name</label>
+                                    <input type="text" id="input-openai-model" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="e.g. gpt-4o">
+                                </div>
+                            </div>
+                            
+                            <!-- Anthropic Fields -->
+                            <div id="field-group-anthropic" class="provider-field-group hidden space-y-4">
+                                <div>
+                                    <div class="flex justify-between items-end mb-2">
+                                        <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Anthropic API Key</label>
+                                        <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-[10px] font-bold text-teal-600 hover:text-teal-700 hover:underline">Get your API-Key here</a>
+                                    </div>
+                                    <input type="password" id="input-anthropic-key" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="Paste Anthropic API Key...">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Model Name</label>
+                                    <input type="text" id="input-anthropic-model" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="e.g. claude-3-7-sonnet-20250219">
+                                </div>
+                            </div>
+
+                            <!-- Perplexity Fields -->
+                            <div id="field-group-perplexity" class="provider-field-group hidden space-y-4">
+                                <div>
+                                    <div class="flex justify-between items-end mb-2">
+                                        <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Perplexity API Key</label>
+                                        <a href="https://www.perplexity.ai/settings/api" target="_blank" class="text-[10px] font-bold text-teal-600 hover:text-teal-700 hover:underline">Get your API-Key here</a>
+                                    </div>
+                                    <input type="password" id="input-perplexity-key" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="Paste Perplexity API Key...">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Model Name</label>
+                                    <input type="text" id="input-perplexity-model" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="e.g. sonar-pro">
+                                </div>
                             </div>
 
                             <!-- Custom/Local Fields -->
@@ -431,8 +491,8 @@ export const templates = {
     `,
     versionRationaleView: `
         <div class="p-8 space-y-6">
-            <h4 class="text-xl font-extrabold text-slate-800">Public Beta 0.1 Rationale</h4>
-            <p class="text-sm text-slate-600 leading-relaxed">Public Beta 0.1 focuses on **Augmented Intelligence** - the principle that the machine should guide, not replace, human scientific judgement. Key architectural changes include:</p>
+            <h4 class="text-xl font-extrabold text-slate-800">Public Beta 0.1.1 Rationale</h4>
+            <p class="text-sm text-slate-600 leading-relaxed">Public Beta 0.1.1 focuses on **Augmented Intelligence** - the principle that the machine should guide, not replace, human scientific judgement. Key architectural changes include:</p>
             <ul class="list-disc pl-6 text-sm text-slate-600 space-y-4">
                 <li><strong>Linguistic Matrix Syntax:</strong> Explicit deconstruction of measurement sites using the {matrix:connector:term} pattern ensures standardisation.</li>
                 <li><strong>Traceable Reasoning:</strong> Every AI interaction is logged and downloadable, meeting EBTC transparency requirements.</li>
@@ -449,11 +509,16 @@ export const templates = {
 
             <div class="space-y-2">
                 <h5 class="text-xs font-extrabold uppercase tracking-widest text-slate-500">Concept and Development</h5>
-                <p class="text-sm text-slate-700">Joel Chan, Jan-Peter Nilsson, Paul Whaley, et al.</p>
+                <p class="text-sm text-slate-700">Joel Chan, Jan-Peter Nilsson, Paul Whaley, Pritchard, C., Lagisz, M.</p>
             </div>
             
             <div class="space-y-2">
-                 <h5 class="text-xs font-extrabold uppercase tracking-widest text-slate-500">Toolkit Development & Code</h5>
+                 <h5 class="text-xs font-extrabold uppercase tracking-widest text-slate-500">Toolkit Development</h5>
+                 <p class="text-sm text-slate-700">Jan-Peter Nilsson & Joel Chan</p>
+            </div>
+
+            <div class="space-y-2">
+                 <h5 class="text-xs font-extrabold uppercase tracking-widest text-slate-500">Code</h5>
                  <p class="text-sm text-slate-700">Jan-Peter Nilsson</p>
             </div>
 

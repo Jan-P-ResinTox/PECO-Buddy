@@ -7,8 +7,17 @@ import { initAuthorToolkitFlow } from './views/pecoToolkit.js';
 import { initReviewerToolkitView } from './views/reviewPeco.js';
 import { initNlpToolkitView } from './views/nlpToolkit.js';
 
+// Global error logging for Dev-Team
+window.addEventListener('error', (event) => {
+    console.error(`[Global Error] ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`, event.error);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error(`[Unhandled Promise Rejection]`, event.reason);
+});
+
 /**
- * Main application entry point for PECO-Buddy Public Beta 0.1.
+ * Main application entry point for PECO-Buddy Public Beta 0.1.1.
  * Manages view routing, sidebar interactions, and global settings.
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -76,11 +85,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Provider Configuration
                 const providerSelect = modal.querySelector('#settings-provider-select');
                 const fieldsGemini = modal.querySelector('#field-group-gemini');
+                const fieldsOpenAI = modal.querySelector('#field-group-openai');
+                const fieldsAnthropic = modal.querySelector('#field-group-anthropic');
+                const fieldsPerplexity = modal.querySelector('#field-group-perplexity');
                 const fieldsCustom = modal.querySelector('#field-group-custom');
+
                 const inputGeminiKey = modal.querySelector('#input-gemini-key');
+                const inputOpenAiKey = modal.querySelector('#input-openai-key');
+                const inputOpenAiModel = modal.querySelector('#input-openai-model');
+                const inputAnthropicKey = modal.querySelector('#input-anthropic-key');
+                const inputAnthropicModel = modal.querySelector('#input-anthropic-model');
+                const inputPerplexityKey = modal.querySelector('#input-perplexity-key');
+                const inputPerplexityModel = modal.querySelector('#input-perplexity-model');
                 const inputCustomUrl = modal.querySelector('#input-custom-url');
                 const inputCustomModel = modal.querySelector('#input-custom-model');
                 const inputCustomKey = modal.querySelector('#input-custom-key');
+                
                 const saveConfigBtn = modal.querySelector('#save-provider-config-btn');
                 const resetConfigBtn = modal.querySelector('#reset-provider-config-btn');
                 const statusDisplay = modal.querySelector('#provider-status-display');
@@ -88,6 +108,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Assistance Level Slider
                 const assistSlider = modal.querySelector('#settings-assistance-slider');
                 const assistDisplay = modal.querySelector('#assistance-level-display');
+
+                // Autonomy Slider
+                const tempSlider = modal.querySelector('#settings-temperature-slider');
+                const tempDisplay = modal.querySelector('#temperature-level-display');
 
                 // Seed Control
                 const seedSlider = modal.querySelector('#settings-seed-slider');
@@ -128,6 +152,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     assistSlider.onchange = (e) => {
                         appState.assistanceLevel = parseInt(e.target.value);
                         localStorage.setItem('peco_buddy_assistance_level', e.target.value);
+                    };
+                }
+
+                if (tempSlider && tempDisplay) {
+                    tempSlider.value = Math.round(appState.autonomyLevel * 10);
+                    const updateTempLabel = (val) => {
+                        const v = parseFloat(val) / 10.0;
+                        if (v <= 0.2) tempDisplay.textContent = v.toFixed(1) + " (Strict Clerk)";
+                        else if (v <= 0.7) tempDisplay.textContent = v.toFixed(1) + " (Balanced)";
+                        else tempDisplay.textContent = v.toFixed(1) + " (Creative Architect)";
+                    };
+                    updateTempLabel(Math.round(appState.autonomyLevel * 10));
+                    
+                    tempSlider.oninput = (e) => updateTempLabel(e.target.value);
+                    tempSlider.onchange = (e) => {
+                        const v = parseFloat(e.target.value) / 10.0;
+                        appState.autonomyLevel = v;
+                        localStorage.setItem('peco_buddy_autonomy_level', v.toString());
                     };
                 }
 
@@ -213,19 +255,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 const initProviderUI = () => {
                     providerSelect.value = appState.aiProvider || 'gemini';
                     inputGeminiKey.value = appState.globalApiKey || '';
+                    inputOpenAiKey.value = appState.openaiKey || '';
+                    inputOpenAiModel.value = appState.openaiModel || 'gpt-4o';
+                    inputAnthropicKey.value = appState.anthropicKey || '';
+                    inputAnthropicModel.value = appState.anthropicModel || 'claude-3-7-sonnet-20250219';
+                    inputPerplexityKey.value = appState.perplexityKey || '';
+                    inputPerplexityModel.value = appState.perplexityModel || 'sonar-pro';
                     inputCustomUrl.value = appState.aiBaseUrl || '';
                     inputCustomModel.value = appState.aiModel || '';
                     inputCustomKey.value = appState.globalApiKey || ''; // Reuse global key storage
 
                     const updateVisibility = () => {
-                        const isGemini = providerSelect.value === 'gemini';
-                        fieldsGemini.classList.toggle('hidden', !isGemini);
-                        fieldsCustom.classList.toggle('hidden', isGemini);
+                        const val = providerSelect.value;
+                        fieldsGemini.classList.toggle('hidden', val !== 'gemini');
+                        fieldsOpenAI.classList.toggle('hidden', val !== 'openai');
+                        fieldsAnthropic.classList.toggle('hidden', val !== 'anthropic');
+                        fieldsPerplexity.classList.toggle('hidden', val !== 'perplexity');
+                        fieldsCustom.classList.toggle('hidden', val !== 'local');
                         
                         // Prefill defaults if empty when switching
-                        if (!isGemini && !inputCustomUrl.value) {
-                             if (providerSelect.value === 'local') inputCustomUrl.value = 'http://localhost:11434/v1';
-                             if (providerSelect.value === 'openai') inputCustomUrl.value = 'https://api.openai.com/v1';
+                        if (val === 'local' && !inputCustomUrl.value) {
+                             inputCustomUrl.value = 'http://localhost:11434/v1';
                         }
                     };
                     providerSelect.onchange = updateVisibility;
@@ -244,6 +294,21 @@ document.addEventListener('DOMContentLoaded', () => {
                                 appState.globalApiKey = key;
                                 localStorage.setItem('peco_buddy_api_key', key);
                             }
+                        } else if (provider === 'openai') {
+                            appState.openaiKey = inputOpenAiKey.value.trim();
+                            appState.openaiModel = inputOpenAiModel.value.trim();
+                            localStorage.setItem('peco_buddy_openai_key', appState.openaiKey);
+                            localStorage.setItem('peco_buddy_openai_model', appState.openaiModel);
+                        } else if (provider === 'anthropic') {
+                            appState.anthropicKey = inputAnthropicKey.value.trim();
+                            appState.anthropicModel = inputAnthropicModel.value.trim();
+                            localStorage.setItem('peco_buddy_anthropic_key', appState.anthropicKey);
+                            localStorage.setItem('peco_buddy_anthropic_model', appState.anthropicModel);
+                        } else if (provider === 'perplexity') {
+                            appState.perplexityKey = inputPerplexityKey.value.trim();
+                            appState.perplexityModel = inputPerplexityModel.value.trim();
+                            localStorage.setItem('peco_buddy_perplexity_key', appState.perplexityKey);
+                            localStorage.setItem('peco_buddy_perplexity_model', appState.perplexityModel);
                         } else {
                             const url = inputCustomUrl.value.trim();
                             const model = inputCustomModel.value.trim();
@@ -304,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showUserManual = () => {
-            showModal('User Manual Public Beta 0.1', `<div class="modal-body p-0">${templates.userManualView}</div>`, (modal) => {
+            showModal('User Manual Public Beta 0.1.1', `<div class="modal-body p-0">${templates.userManualView}</div>`, (modal) => {
                 const searchInput = modal.querySelector('#manual-search-input');
                 const sections = modal.querySelectorAll('.manual-section');
                 if (searchInput) {

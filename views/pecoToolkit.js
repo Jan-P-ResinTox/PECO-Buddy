@@ -9,14 +9,62 @@ import { formatPecoForDisplay, styleMatrices, showLoading, showError, copyTableT
 import { showTransparencyLogModal } from './reviewPeco.js';
 
 const STUDY_TYPES = [
-    { id: 'systematic_review', name: 'Systematic Review', icon: 'fa-magnifying-glass-chart', tooltip: 'Select this if you are planning to summarize existing research on a specific topic.' },
-    { id: 'rct', name: 'RCT', icon: 'fa-vials', tooltip: 'Select this if you are planning an experiment where participants are randomly assigned to different groups.' },
-    { id: 'cohort', name: 'Cohort Study', icon: 'fa-users-line', tooltip: 'Select this if you are planning to follow a group of people over time to observe outcomes.' },
-    { id: 'case_control', name: 'Case-Control Study', icon: 'fa-user-group', tooltip: 'Select this if you are planning to compare people with a specific outcome to those without it.' },
-    { id: 'animal_study', name: 'Animal Study', icon: 'fa-paw', tooltip: 'Select this if you are planning an experiment using animal models.' },
-    { id: 'in_vitro', name: 'In Vitro Study', icon: 'fa-microscope', tooltip: 'Select this if you are planning an experiment using cells or tissues in a lab setting.' },
-    { id: 'cross_sectional', name: 'Cross-Sectional', icon: 'fa-chart-pie', tooltip: 'Select this if you are planning to analyze data from a population at a specific point in time.' },
-    { id: 'case_series', name: 'Case Series / Report', icon: 'fa-clipboard-user', tooltip: 'Select this if you are planning to describe a single patient or a small group of patients.' }
+    { 
+        id: 'systematic_review', 
+        name: 'Systematic Review', 
+        icon: 'fa-magnifying-glass-chart', 
+        tooltip: 'Select this if you are planning to summarize existing research on a specific topic.',
+        explanation: '<b>PECO in Systematic Reviews:</b><br/>PECO is vital here to define strict inclusion and exclusion criteria for your literature search. Broad but well-defined populations and exposures are recommended.'
+    },
+    { 
+        id: 'rct', 
+        name: 'RCT', 
+        icon: 'fa-vials', 
+        tooltip: 'Select this if you are planning an experiment where participants are randomly assigned to different groups.',
+        explanation: '<b>PECO in RCTs:</b><br/>For an RCT, the "Exposure" is your Intervention, and "Comparator" is the control/placebo. PECO helps establish your precise trial parameters.'
+    },
+    { 
+        id: 'cohort', 
+        name: 'Cohort Study', 
+        icon: 'fa-users-line', 
+        tooltip: 'Select this if you are planning to follow a group of people over time to observe outcomes.',
+        explanation: '<b>PECO in Cohort Studies:</b><br/>PECO ensures clear distinction between exposed and unexposed groups within the population over time. Essential for preventing wild-west reporting variables.'
+    },
+    { 
+        id: 'case_control', 
+        name: 'Case-Control Study', 
+        icon: 'fa-user-group', 
+        tooltip: 'Select this if you are planning to compare people with a specific outcome to those without it.',
+        explanation: '<b>PECO in Case-Control:</b><br/>This is often reversed logically (Outcome is known first). PECO forces clarity on what constitutes the Population from which cases and controls are drawn, and the primary Exposure of interest.'
+    },
+    { 
+        id: 'animal_study', 
+        name: 'Animal Study', 
+        icon: 'fa-paw', 
+        tooltip: 'Select this if you are planning an experiment using animal models.',
+        explanation: '<b>PECO in Animal Studies:</b><br/>Crucial for primary studies! Define the exact strain/model (Population), precise dosing (Exposure), the negative/vehicle group (Comparator), and the specific endpoints (Outcome).'
+    },
+    { 
+        id: 'in_vitro', 
+        name: 'In Vitro Study', 
+        icon: 'fa-microscope', 
+        tooltip: 'Select this if you are planning an experiment using cells or tissues in a lab setting.',
+        explanation: '<b>PECO in In Vitro:</b><br/>Brings reporting order to bench science. Define the cell line/assay (Population), exact chemical/concentration (Exposure), the vehicle control (Comparator), and the measured biomarkers (Outcome).'
+    },
+    { 
+        id: 'cross_sectional', 
+        name: 'Cross-Sectional', 
+        icon: 'fa-chart-pie', 
+        tooltip: 'Select this if you are planning to analyze data from a population at a specific point in time.',
+        explanation: '<b>PECO in Cross-Sectional:</b><br/>While snapshot-based and often lacking a true longitudinal Comparator, PECO helps define the target demographic (Population), the factor being measured (Exposure), and the associated status (Outcome).'
+    },
+    { 
+        id: 'case_series', 
+        name: 'Case Series / Report', 
+        icon: 'fa-clipboard-user', 
+        tooltip: 'Select this if you are planning to describe a single patient or a small group of patients.',
+        explanation: '<b>PECO in Case Series:</b><br/>Often lacks a Comparator entirely. PECO can still define the precise characteristics of the patients (Population) and the precipitating factor (Exposure).'
+    }
 ];
 
 export const initAuthorToolkitFlow = () => {
@@ -148,10 +196,43 @@ function initIdeationView(container) {
   studyTypeSelector.onclick = (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
+    
+    const isAlreadyActive = btn.classList.contains('active');
     appState.authorWorkflow.ideationData.selectedStudyType = { id: btn.dataset.id, name: btn.dataset.name };
     studyTypeSelector.querySelectorAll('button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     updateUI();
+
+    if (!isAlreadyActive) {
+        const studyData = STUDY_TYPES.find(st => st.id === btn.dataset.id);
+        if (studyData && studyData.explanation) {
+            showModal(`Focus: ${studyData.name}`, `
+                <div class="modal-body p-8">
+                    <div class="flex flex-col items-center gap-4 mb-6 text-center">
+                        <div class="w-16 h-16 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center text-3xl shadow-sm border border-teal-200">
+                            <i class="fa-solid ${studyData.icon}"></i>
+                        </div>
+                        <p class="text-slate-600 text-sm font-medium leading-relaxed">${studyData.tooltip}</p>
+                    </div>
+                    <div class="bg-indigo-50/50 border-l-4 border-indigo-500 rounded-r-xl p-5 text-sm text-slate-800 leading-relaxed shadow-sm">
+                        ${studyData.explanation}
+                    </div>
+                </div>
+            `, null, (modal, closeModal) => {
+                const container = modal.querySelector('.modal-container');
+                if (container) {
+                    const footer = document.createElement('div');
+                    footer.className = 'modal-footer p-6 border-t flex justify-end gap-3 bg-slate-50';
+                    footer.innerHTML = `
+                        <button class="px-6 py-2 rounded-xl text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-all close-trigger">Cancel</button>
+                        <button class="px-6 py-2 rounded-xl text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition-all shadow-sm close-trigger">Continue With This</button>
+                    `;
+                    footer.querySelectorAll('.close-trigger').forEach(b => b.addEventListener('click', closeModal));
+                    container.appendChild(footer);
+                }
+            });
+        }
+    }
   };
 
   generateBtn.onclick = async () => {
@@ -168,7 +249,10 @@ function initIdeationView(container) {
           appState.authorWorkflow.ideationData.generatedSuggestions = result.questions;
           setTimeout(() => renderSuggestions(), 500);
       }
-    } catch(e) { showError(resultsContainer, e.message); }
+    } catch(e) { 
+        console.error("Ideation Generate Error:", e);
+        showError(resultsContainer, e.message); 
+    }
   };
 
   if (continueOwnBtn) {
@@ -266,12 +350,21 @@ function initClarityView(container) {
   }
 
   const runAnalysis = async (isRefresh = false) => {
+    const scoreBtnBottom = footerContainer.querySelector('#score-clarity-btn-bottom');
     if (!isRefresh) {
         scoreBtn.disabled = true;
         scoreBtn.innerHTML = '<div class="loader inline-block"></div> <span class="animate-pulse">ANALYSING...</span>';
+        if (scoreBtnBottom) {
+            scoreBtnBottom.disabled = true;
+            scoreBtnBottom.innerHTML = '<div class="loader inline-block"></div> <span class="animate-pulse">ANALYSING...</span>';
+        }
     } else {
         scoreBtn.disabled = true;
         scoreBtn.innerHTML = '<div class="loader inline-block"></div> <span class="animate-pulse">RE-ANALYSING...</span>';
+        if (scoreBtnBottom) {
+            scoreBtnBottom.disabled = true;
+            scoreBtnBottom.innerHTML = '<div class="loader inline-block"></div> <span class="animate-pulse">RE-ANALYSING...</span>';
+        }
     }
 
     try {
@@ -307,7 +400,9 @@ function initClarityView(container) {
           showProgressGauge(dashboardContainer, 'Deconstructing Linguistic Syntax...', 50, "Scanning Context");
           const prelim = await GeminiAPI.callDomainIdentifierAPI(q, contextLogic);
           showProgressGauge(dashboardContainer, 'Mapping Matrix Intersections...', 75, "Verification Phase");
-          const peco = await GeminiAPI.callSpecialistPecoExtractorAPI(prelim.domain, prelim, q, appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General', contextLogic);
+          const pecoResponse = await GeminiAPI.callSpecialistPecoExtractorAPI(prelim.domain, prelim, q, appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General', contextLogic);
+          const peco = pecoResponse.extracted_data;
+          appState.authorWorkflow.clarityData.extractionMetadata = pecoResponse.extraction_metadata;
           const analysis = await GeminiAPI.callQuestionQualityAPI(q, peco, dashboardContainer, config);
           showProgressGauge(dashboardContainer, 'Finalising Advisory Feed...', 100, "Synthesis Complete");
 
@@ -317,10 +412,18 @@ function initClarityView(container) {
           appState.authorWorkflow.clarityData.analysis = analysis;
           setTimeout(() => renderResults(), 800);
       }
-    } catch(e) { showError(dashboardContainer, e.message); }
+    } catch(e) { 
+        console.error("Analysis / Quality Engine Error:", e);
+        showError(dashboardContainer, e.message); 
+    }
     finally {
         scoreBtn.disabled = false;
         scoreBtn.innerHTML = '<i class="fa-solid fa-play"></i> Re-Analyse';
+        const scoreBtnBottom = footerContainer.querySelector('#score-clarity-btn-bottom');
+        if (scoreBtnBottom) {
+            scoreBtnBottom.disabled = false;
+            scoreBtnBottom.innerHTML = '<i class="fa-solid fa-play"></i> Re-Analyse';
+        }
     }
   };
 
@@ -332,13 +435,15 @@ function initClarityView(container) {
         questionDisplay.style.position = 'relative';
         questionDisplay.appendChild(loadingOverlay);
 
-        const synth = await GeminiAPI.callPecoSynthesizerAPI(appState.authorWorkflow.liveCoAuthorData.peco);
+        const currentQuestion = appState.authorWorkflow.clarityData.researchQuestion.trim() !== '' ? appState.authorWorkflow.clarityData.researchQuestion : null;
+        const synth = await GeminiAPI.callPecoSynthesizerAPI(appState.authorWorkflow.liveCoAuthorData.peco, currentQuestion);
         appState.authorWorkflow.clarityData.researchQuestion = synth.semantic_statement;
         appState.authorWorkflow.pecoWorkshopData = { peco: synth.naturalised_peco };
         
         refreshDisplay();
         ToastService.show("Protocol statement synthesized. Click 'Analyse' to refresh advisory.", "success");
     } catch (err) { 
+        console.error("Synthesizer API Error:", err);
         ToastService.show("Update failed: " + err.message, "error"); 
     } finally {
         const overlay = questionDisplay.querySelector('.loader')?.parentElement;
@@ -358,12 +463,12 @@ function initClarityView(container) {
         <div class="flex justify-between items-center mb-10 px-4">
           <div class="flex flex-col gap-1">
             <h4 class="text-sm font-extrabold uppercase text-slate-400 tracking-widest">Suggested Refinement</h4>
-            <div class="flex gap-2 mt-2">
-                <button id="sync-all-btn" class="text-[10px] font-extrabold text-teal-600 bg-teal-50 px-4 py-2 rounded-xl border border-teal-100 uppercase tracking-widest hover:bg-teal-100 transition-colors">
-                    <i class="fa-solid fa-arrows-rotate mr-2"></i> Update Research Question
-                </button>
-                <button id="refresh-audit-btn" class="text-[10px] font-extrabold text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-teal-100 uppercase tracking-widest hover:bg-teal-100 transition-colors">
+            <div class="flex flex-wrap gap-2 mt-2">
+                <button id="refresh-audit-btn" class="text-[10px] font-extrabold text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-teal-100 uppercase tracking-widest hover:bg-teal-100 transition-colors shadow-sm">
                     <i class="fa-solid fa-wand-sparkles mr-2"></i> Refresh Advisory
+                </button>
+                <button id="view-extraction-log-btn" class="text-[10px] font-extrabold text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 uppercase tracking-widest hover:bg-slate-100 transition-colors shadow-sm">
+                    <i class="fa-solid fa-list-check mr-2"></i> View Parser Log
                 </button>
             </div>
           </div>
@@ -471,19 +576,65 @@ function initClarityView(container) {
     `;
 
     footerContainer.innerHTML = `
-        <div class="bg-white p-10 rounded-[3.5rem] border shadow-sm flex flex-col md:flex-row justify-end items-center gap-8">
-           <button id="finalise-btn" class="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white px-12 py-5 rounded-3xl font-extrabold uppercase tracking-widest text-[11px] shadow-2xl transition-all">Review Final Output &raquo;</button>
+        <div class="bg-white p-10 rounded-[3.5rem] border shadow-sm flex flex-col md:flex-row justify-between items-center gap-8">
+            <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                <button id="sync-all-btn" class="bg-slate-50 border border-teal-100 hover:bg-teal-100 text-teal-600 px-8 py-5 rounded-3xl font-extrabold uppercase tracking-widest text-[11px] shadow-sm transition-all flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-arrows-rotate"></i> Update Research Question
+                </button>
+                <button id="score-clarity-btn-bottom" class="bg-slate-800 hover:bg-slate-900 text-white px-8 py-5 rounded-3xl font-extrabold uppercase tracking-widest text-[11px] shadow-lg transition-all flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-play"></i> Re-Analyse
+                </button>
+            </div>
+            <button id="finalise-btn" class="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white px-12 py-5 rounded-3xl font-extrabold uppercase tracking-widest text-[11px] shadow-2xl transition-all">Review Final Output &raquo;</button>
         </div>
     `;
 
     const finaliseBtn = footerContainer.querySelector('#finalise-btn');
     if (finaliseBtn) finaliseBtn.onclick = () => jumpToStep('step-peco-workshop');
 
-    const syncAllBtn = dashboardContainer.querySelector('#sync-all-btn');
+    const syncAllBtn = footerContainer.querySelector('#sync-all-btn');
     if (syncAllBtn) syncAllBtn.onclick = syncAllProtocol;
+
+    const scoreBtnBottom = footerContainer.querySelector('#score-clarity-btn-bottom');
+    if (scoreBtnBottom) scoreBtnBottom.onclick = () => runAnalysis(true);
 
     const refreshAuditBtn = dashboardContainer.querySelector('#refresh-audit-btn');
     if (refreshAuditBtn) refreshAuditBtn.onclick = () => runAnalysis(true);
+
+    const viewExtractionLogBtn = dashboardContainer.querySelector('#view-extraction-log-btn');
+    if (viewExtractionLogBtn) {
+        viewExtractionLogBtn.onclick = () => {
+            const metadata = appState.authorWorkflow.clarityData.extractionMetadata;
+            if (!metadata) {
+                ToastService.show("No parser log found. Run analysis first.", "info");
+                return;
+            }
+            const content = `
+                <div class="modal-body space-y-4">
+                    <div>
+                        <h4 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Chain of Thought</h4>
+                        <p class="text-sm text-slate-700 leading-relaxed break-words">${escapeHtml(metadata.chain_of_thought_reasoning || 'N/A')}</p>
+                    </div>
+                    <div>
+                        <h4 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Verbatim Source Quotes</h4>
+                        <ul class="list-disc list-inside text-sm text-slate-700 break-words">
+                            ${(metadata.verbatim_source_quotes || []).map(q => `<li class="break-words">${escapeHtml(q)}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Drift Detected</h4>
+                        <p class="text-sm text-slate-700 break-words">${metadata.semantic_drift_detected ? '<span class="text-rose-600 font-bold">YES</span>' : '<span class="text-emerald-600 font-bold">NO</span>'}</p>
+                    </div>
+                    ${metadata.semantic_drift_detected ? `
+                    <div>
+                        <h4 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Drift Reasoning</h4>
+                        <p class="text-sm text-slate-700 leading-relaxed break-words">${escapeHtml(metadata.drift_reasoning || 'N/A')}</p>
+                    </div>` : ''}
+                </div>
+            `;
+            showModal('Zero-Shot Extraction Log', content, false);
+        };
+    }
 
     dashboardContainer.querySelectorAll('.carousel-prev').forEach(btn => {
         btn.onclick = () => {
@@ -625,7 +776,7 @@ const downloadPecoJson = () => {
     const payload = {
         metadata: {
             tool: "PECO-Buddy",
-            version: "Public Beta 0.1",
+            version: "Public Beta 0.1.1",
             timestamp: new Date().toISOString(),
             study_type: appState.authorWorkflow.ideationData.selectedStudyType?.name || 'General'
         },
@@ -675,7 +826,7 @@ const showNanopubReportModal = () => {
                 <div class="grid grid-cols-2 gap-4">
                     <div class="p-4 border rounded-xl bg-slate-50">
                         <p class="text-[9px] font-bold text-slate-400 uppercase">Engine</p>
-                        <p class="text-xs font-bold text-slate-700">PECO-Buddy Public Beta 0.1</p>
+                        <p class="text-xs font-bold text-slate-700">PECO-Buddy Public Beta 0.1.1</p>
                     </div>
                     <div class="p-4 border rounded-xl bg-slate-50">
                         <p class="text-[9px] font-bold text-slate-400 uppercase">Timestamp</p>

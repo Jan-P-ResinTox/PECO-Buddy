@@ -4,13 +4,20 @@ export const appState = {
     showTooltips: true,
     fontSize: localStorage.getItem('peco_buddy_font_size') || 'md', // sm, md, lg
     assistanceLevel: parseInt(localStorage.getItem('peco_buddy_assistance_level') || '3'), // 1 (Min) to 5 (Max)
+    autonomyLevel: parseFloat(localStorage.getItem('peco_buddy_autonomy_level') || '0'), // 0.0 (Clerk) to 1.0 (Architect)
     globalSeed: parseInt(localStorage.getItem('peco_buddy_seed') || '42'),
     
     // AI Provider Configuration
-    aiProvider: localStorage.getItem('peco_buddy_ai_provider') || 'gemini', // 'gemini', 'openai', 'local'
+    aiProvider: localStorage.getItem('peco_buddy_ai_provider') || 'gemini', 
     aiBaseUrl: localStorage.getItem('peco_buddy_ai_base_url') || '',
     aiModel: localStorage.getItem('peco_buddy_ai_model') || '',
     globalApiKey: localStorage.getItem('peco_buddy_api_key') || '', 
+    openaiKey: localStorage.getItem('peco_buddy_openai_key') || '',
+    openaiModel: localStorage.getItem('peco_buddy_openai_model') || '',
+    anthropicKey: localStorage.getItem('peco_buddy_anthropic_key') || '',
+    anthropicModel: localStorage.getItem('peco_buddy_anthropic_model') || '',
+    perplexityKey: localStorage.getItem('peco_buddy_perplexity_key') || '',
+    perplexityModel: localStorage.getItem('peco_buddy_perplexity_model') || '',
     
     // General Settings
     stripMetadata: localStorage.getItem('peco_buddy_strip_metadata') === 'true',

@@ -158,7 +158,7 @@ export const showLoading = (container, message) => {
 
 export const showError = (container, message) => { 
     if(!container) return;
-    container.innerHTML = `<div class="p-10 bg-rose-50 border border-rose-100 text-rose-800 rounded-[2.5rem] flex items-center gap-4"><i class="fa-solid fa-triangle-exclamation text-2xl"></i><div><p class="font-extrabold text-[10px] uppercase tracking-widest">System Logic Fault</p><p class="text-sm font-medium mt-1">${message}</p></div></div>`; 
+    container.innerHTML = `<div class="p-10 bg-rose-50 border border-rose-100 text-rose-800 rounded-[2.5rem] flex items-start gap-4"><i class="fa-solid fa-triangle-exclamation text-2xl mt-1"></i><div class="flex-1 min-w-0"><p class="font-extrabold text-[10px] uppercase tracking-widest">System Logic Fault</p><p class="text-sm font-medium mt-1 whitespace-pre-wrap break-words overflow-hidden text-ellipsis">${escapeHtml(message)}</p></div></div>`; 
 };
 
 export const handleExport = async (contentSelector, format, filename) => {

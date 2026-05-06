@@ -71,11 +71,20 @@ input, textarea, select {
     cursor: pointer;
 }
 
-.btn-teal:hover, 
-#generate-ideation-btn:hover, 
-#score-clarity-btn:hover, 
-#finalise-btn:hover, 
-#view-transparency-report-btn:hover {
+#generate-ideation-btn:disabled,
+#score-clarity-btn:disabled,
+#continue-own-question-btn:disabled {
+    background-color: #cbd5e1 !important; /* slate-300 */
+    opacity: 0.6;
+    cursor: not-allowed !important;
+    color: #f1f5f9 !important;
+}
+
+.btn-teal:hover:not(:disabled), 
+#generate-ideation-btn:hover:not(:disabled), 
+#score-clarity-btn:hover:not(:disabled), 
+#finalise-btn:hover:not(:disabled), 
+#view-transparency-report-btn:hover:not(:disabled) {
     background-color: var(--primary-hover) !important;
 }
 
