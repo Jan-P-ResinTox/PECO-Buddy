@@ -1,6 +1,6 @@
 {
-  "name": "New PECO-Buddy Public Beta 0.1.1",
-  "description": "Full code PECO-Buddy-copy With PECO only and improved Reviewer workflow",
+  "name": "PECO-Buddy Closed Pilot Alpha 0.1.0",
+  "description": "PECO scoping tool conforming to NTP OHAT standards with sovereign local AI and cloud model inference support.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

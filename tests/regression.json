@@ -1,0 +1,1035 @@
+{
+  "description": "Regression suite of previously observed agent failures. Every case documents a real defect that reached the user; run with: npm test",
+  "cases": [
+    {
+      "id": "matrix-connector-echo",
+      "kind": "matrix",
+      "note": "Model echoed the prompt placeholder {matrix:connector:term} literally (observed in the app).",
+      "input": "Lead {matrix:connector:maternal blood} exposure",
+      "taggingOn": true,
+      "mustContain": [
+        "maternal blood"
+      ],
+      "mustNotContain": [
+        "connector"
+      ]
+    },
+    {
+      "id": "matrix-no-fabricated-connector",
+      "kind": "matrix",
+      "note": "Connectorless tag must not invent 'via' (original pre-0.1.0 bug).",
+      "input": "Lead {matrix:maternal blood} exposure",
+      "taggingOn": true,
+      "mustContain": [
+        "maternal blood"
+      ],
+      "mustNotContain": [
+        "via"
+      ]
+    },
+    {
+      "id": "matrix-connector-only-tag-dropped",
+      "kind": "matrix",
+      "note": "Connector-only or empty tag renders nothing, never a dangling 'in'.",
+      "input": "Lead {matrix:in} exposure",
+      "taggingOn": true,
+      "mustContain": [
+        "Lead"
+      ],
+      "mustNotContain": [
+        "{matrix",
+        ">in<"
+      ]
+    },
+    {
+      "id": "matrix-tagging-off-strips-tags",
+      "kind": "matrix",
+      "note": "With matrix tagging off, output is plain prose with no matrix treatment.",
+      "input": "Lead {matrix:in:maternal blood} exposure",
+      "taggingOn": false,
+      "mustContain": [
+        "in maternal blood"
+      ],
+      "mustNotContain": [
+        "{matrix",
+        "peco-matrix-connector"
+      ]
+    },
+    {
+      "id": "strip-matrix-tags-prose",
+      "kind": "strip",
+      "note": "stripMatrixTags (the tagging-off response sanitizer) converts tags to prose.",
+      "input": "Lead {matrix:via:cord blood} and {matrix:connector:serum} samples",
+      "mustEqual": "Lead via cord blood and serum samples"
+    },
+    {
+      "id": "advisory-string-suggestions-coerced",
+      "kind": "advisory-strings",
+      "note": "Providers returning suggestions as plain strings previously rendered as 'No suggestions.' on every card.",
+      "input": {
+        "feedback": [
+          {
+            "component": "Population",
+            "suggestions": [
+              "Sprague-Dawley rats",
+              "Wistar rats"
+            ]
+          }
+        ]
+      },
+      "expectSuggestions": 2
+    },
+    {
+      "id": "advisory-multiple-entries-merged",
+      "kind": "advisory-merge",
+      "note": "Providers emitting one feedback entry per card previously showed only the first card.",
+      "input": {
+        "feedback": [
+          {
+            "component": "population",
+            "suggestions": [
+              {
+                "refined_term": "A"
+              }
+            ]
+          },
+          {
+            "component": "Population",
+            "suggestions": [
+              {
+                "refined_term": "B"
+              },
+              {
+                "refined_term": "C"
+              }
+            ]
+          }
+        ]
+      },
+      "expectTerms": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "id": "advisory-object-keyed-feedback",
+      "kind": "advisory-keyed",
+      "note": "Object-keyed feedback previously lost the component labels in flattening.",
+      "input": {
+        "feedback": {
+          "population": [
+            {
+              "refined_term": "P1"
+            }
+          ]
+        }
+      },
+      "expectTerms": [
+        "P1"
+      ]
+    },
+    {
+      "id": "rigor-bpa-framing-conflict",
+      "kind": "validate-question",
+      "note": "The BPA question mixes 'correlate' with 'compared with' (PW feedback, Apr 24 2026).",
+      "input": {
+        "question": {
+          "full_statement": "Does elevated bisphenol A concentration correlate with higher oxidative stress indicators in HepG2 cell cultures compared with baseline conditions?",
+          "population": "HepG2 cells",
+          "exposure": "bisphenol A concentration",
+          "comparison": "baseline conditions",
+          "outcome": "oxidative stress indicators"
+        },
+        "studyType": "In Vitro Study"
+      },
+      "expectCodes": [
+        "framing_conflict"
+      ]
+    },
+    {
+      "id": "rigor-bpa-comparator-timepoint",
+      "kind": "validate-question",
+      "note": "'baseline conditions' is a measurement time point, not a control group.",
+      "input": {
+        "question": {
+          "full_statement": "Does elevated bisphenol A concentration correlate with higher oxidative stress indicators in HepG2 cell cultures compared with baseline conditions?",
+          "population": "HepG2 cells",
+          "exposure": "bisphenol A concentration",
+          "comparison": "baseline conditions",
+          "outcome": "oxidative stress indicators"
+        },
+        "studyType": "In Vitro Study"
+      },
+      "expectCodes": [
+        "comparator_timepoint",
+        "comparator_vague"
+      ]
+    },
+    {
+      "id": "rigor-bpa-quantifier-leakage",
+      "kind": "validate-components",
+      "note": "'elevated' and 'higher' vanished from every component, silently changing the study's meaning.",
+      "input": {
+        "question": "Does elevated bisphenol A concentration correlate with higher oxidative stress indicators in HepG2 cell cultures compared with baseline conditions?",
+        "peco": {
+          "population": "HepG2 cells",
+          "exposure": "bisphenol A concentration",
+          "comparison": "baseline conditions",
+          "outcome": "oxidative stress indicators",
+          "quantifiers_and_modifiers": {
+            "exposure_modifiers": "Not Specified"
+          }
+        },
+        "studyType": "In Vitro Study"
+      },
+      "expectCodes": [
+        "quantifier_leakage"
+      ]
+    },
+    {
+      "id": "rigor-quartile-in-exposure",
+      "kind": "validate-components",
+      "note": "PW feedback Apr 24 2026: 'the quartile is not part of the exposure'.",
+      "input": {
+        "question": "What is the effect of lead exposure on IQ in children?",
+        "peco": {
+          "population": "children",
+          "exposure": "highest quartile of lead exposure",
+          "comparison": "lowest quartile",
+          "outcome": "IQ"
+        },
+        "studyType": "Systematic Review"
+      },
+      "expectCodes": [
+        "quantile_in_exposure"
+      ]
+    },
+    {
+      "id": "rigor-placeholder-echo-detected",
+      "kind": "validate-components",
+      "note": "The connector-echo class of failure is now caught deterministically, not just rendered around.",
+      "input": {
+        "question": "Does lead exposure affect health?",
+        "peco": {
+          "population": "adults",
+          "exposure": "lead {matrix:connector:serum}",
+          "comparison": "Not Required",
+          "outcome": "blood pressure"
+        },
+        "studyType": "Cohort Study"
+      },
+      "expectCodes": [
+        "matrix_placeholder_echo"
+      ]
+    },
+    {
+      "id": "rigor-clean-question-passes",
+      "kind": "validate-question",
+      "note": "The repaired group-contrast form of the BPA question must pass with zero flags.",
+      "input": {
+        "question": {
+          "full_statement": "Does treatment of HepG2 cells with bisphenol A increase oxidative stress biomarkers compared with vehicle control?",
+          "framing": "group_contrast",
+          "population": "HepG2 cells",
+          "exposure": "bisphenol A treatment",
+          "comparison": "vehicle control",
+          "outcome": "oxidative stress biomarkers"
+        },
+        "studyType": "In Vitro Study"
+      },
+      "expectCodes": []
+    },
+    {
+      "id": "rigor-association-no-comparator",
+      "kind": "validate-question",
+      "note": "An association question with an invented comparator is flagged (PW feedback).",
+      "input": {
+        "question": {
+          "full_statement": "Is bisphenol A concentration associated with oxidative stress biomarkers in HepG2 cell cultures?",
+          "framing": "association",
+          "population": "HepG2 cell cultures",
+          "exposure": "bisphenol A concentration",
+          "comparison": "unexposed controls",
+          "outcome": "oxidative stress biomarkers"
+        },
+        "studyType": "In Vitro Study"
+      },
+      "expectCodes": [
+        "comparator_unexpected_association"
+      ]
+    },
+    {
+      "id": "rigor-comparator-threshold",
+      "kind": "validate-components",
+      "note": "Comparator archetype: a measurement threshold ('< 2 µg/dL') named as the control group instead of a real comparison population.",
+      "input": {
+        "question": "What is the effect of lead exposure on IQ in children?",
+        "peco": {
+          "population": "children",
+          "exposure": "lead exposure",
+          "comparison": "< 2 µg/dL blood lead level",
+          "outcome": "IQ"
+        },
+        "studyType": "Cohort Study"
+      },
+      "expectCodes": [
+        "comparator_threshold"
+      ]
+    },
+    {
+      "id": "rigor-comparator-threshold-with-control-clean",
+      "kind": "validate-components",
+      "note": "A threshold that qualifies a real control group is legitimate and must never be flagged.",
+      "input": {
+        "question": "What is the effect of lead exposure on IQ in children?",
+        "peco": {
+          "population": "children",
+          "exposure": "lead exposure",
+          "comparison": "unexposed controls (BLL < 5 µg/dL)",
+          "outcome": "IQ"
+        },
+        "studyType": "Cohort Study"
+      },
+      "expectCodes": []
+    },
+    {
+      "id": "rigor-comparator-temporal-24-months",
+      "kind": "validate-components",
+      "note": "Comparator archetype: a temporal measurement point ('measured at 24 months') in the comparator field — same class as 'baseline conditions'.",
+      "input": {
+        "question": "What is the effect of lead exposure on IQ in children?",
+        "peco": {
+          "population": "children",
+          "exposure": "lead exposure",
+          "comparison": "measured at 24 months",
+          "outcome": "IQ"
+        },
+        "studyType": "Cohort Study"
+      },
+      "expectCodes": [
+        "comparator_timepoint"
+      ]
+    },
+    {
+      "id": "rigor-comparator-quantile",
+      "kind": "validate-components",
+      "note": "Comparator archetype: a degree qualifier ('lower quartiles') as comparator for a group-contrast framing.",
+      "input": {
+        "question": "What is the effect of lead exposure on IQ in children?",
+        "peco": {
+          "population": "children",
+          "exposure": "lead exposure",
+          "comparison": "lower quartiles",
+          "outcome": "IQ"
+        },
+        "studyType": "Cohort Study",
+        "framing": "group_contrast"
+      },
+      "expectCodes": [
+        "comparator_quantile"
+      ]
+    },
+    {
+      "id": "rigor-comparator-quantile-dose-response-clean",
+      "kind": "validate-components",
+      "note": "A dose_response framing legitimately contrasts exposure-level quantiles; this must stay clean (Systematic Review profile allows quantile axes).",
+      "input": {
+        "question": "How does IQ vary across levels of lead exposure in children?",
+        "peco": {
+          "population": "children",
+          "exposure": "lead exposure",
+          "comparison": "highest versus lowest quartile of exposure",
+          "outcome": "IQ"
+        },
+        "studyType": "Systematic Review",
+        "framing": "dose_response"
+      },
+      "expectCodes": []
+    },
+    {
+      "id": "rigor-dose-in-entity",
+      "kind": "validate-components",
+      "note": "Quantifier leakage archetype: the dose stays embedded in the exposure entity instead of the quantifier field (extraction rule 5: 'Deltamethrin' not 'Deltamethrin 5mg/kg/day').",
+      "input": {
+        "question": "What is the effect of deltamethrin on motor function in rats?",
+        "peco": {
+          "population": "Wistar rats",
+          "exposure": "Deltamethrin 5mg/kg/day",
+          "comparison": "Not Specified",
+          "outcome": "motor function",
+          "quantifiers_and_modifiers": {
+            "exposure_modifiers": "Not Specified"
+          }
+        },
+        "studyType": "Animal Study"
+      },
+      "expectCodes": [
+        "dose_in_entity"
+      ]
+    },
+    {
+      "id": "rigor-advisory-unroutable-component",
+      "kind": "validate-advisory",
+      "note": "Field expectations archetype: a feedback entry whose component label matches none of population|exposure|comparison|outcome was silently dropped by the card router.",
+      "input": {
+        "feedback": [
+          {
+            "component": "confounders",
+            "suggestions": [
+              {
+                "refined_term": "age adjustment"
+              }
+            ]
+          },
+          {
+            "component": "Comparator",
+            "suggestions": [
+              {
+                "refined_term": "vehicle control"
+              }
+            ]
+          }
+        ]
+      },
+      "expectCodes": [
+        "advisory_unroutable_component"
+      ]
+    },
+    {
+      "id": "rigor-advisory-routable-clean",
+      "kind": "validate-advisory",
+      "note": "Tolerated label variants (capitalised 'Comparator', single letters 'P') route fine and must not be flagged.",
+      "input": {
+        "feedback": [
+          {
+            "component": "Comparator",
+            "suggestions": [
+              {
+                "refined_term": "vehicle control"
+              }
+            ]
+          },
+          {
+            "component": "P",
+            "suggestions": [
+              {
+                "refined_term": "Wistar rats"
+              }
+            ]
+          }
+        ]
+      },
+      "expectCodes": []
+    },
+    {
+      "id": "rigor-synthesis-framing-conflict",
+      "kind": "validate-synthesis",
+      "note": "The synthesiser rewrites the protocol statement and can reintroduce the framing conflict into the final question (unguarded estimand path).",
+      "input": {
+        "semantic_statement": "Does bisphenol A correlate with oxidative stress biomarkers in HepG2 cells compared with vehicle control?",
+        "naturalised_peco": {
+          "population": "HepG2 cells",
+          "exposure": "bisphenol A",
+          "comparison": "vehicle control",
+          "outcome": "oxidative stress biomarkers"
+        }
+      },
+      "expectCodes": [
+        "framing_conflict"
+      ]
+    },
+    {
+      "id": "framing-enum-values",
+      "kind": "framing-enum",
+      "note": "Layer 2 schema commitment: every estimand schema consumes exactly this enum.",
+      "expectValues": [
+        "group_contrast",
+        "dose_response",
+        "association",
+        "descriptive"
+      ]
+    },
+    {
+      "id": "flags-non-enumerable",
+      "kind": "attach-flags",
+      "note": "Layer 6: flags ride on the payload as a non-enumerable property so project saves/exports never persist them.",
+      "input": {
+        "population": "children"
+      },
+      "flags": [
+        {
+          "code": "comparator_threshold",
+          "detail": "threshold in comparator"
+        }
+      ]
+    },
+    {
+      "id": "repair-rejected-when-still-dirty",
+      "kind": "resolve-repair",
+      "mode": "ideation",
+      "note": "A repair that still fails re-validation is discarded; the ORIGINAL survives with its flags (hard bound: apply only if clean).",
+      "input": {
+        "studyType": "In Vitro Study",
+        "original": [
+          {
+            "full_statement": "Does elevated bisphenol A correlate with oxidative stress compared with baseline conditions?",
+            "population": "HepG2 cells",
+            "exposure": "bisphenol A",
+            "comparison": "baseline conditions",
+            "outcome": "oxidative stress"
+          }
+        ],
+        "repaired": [
+          {
+            "full_statement": "Does elevated bisphenol A correlate with oxidative stress compared with untreated control?",
+            "population": "HepG2 cells",
+            "exposure": "bisphenol A",
+            "comparison": "untreated control",
+            "outcome": "oxidative stress"
+          }
+        ]
+      },
+      "expectApplied": false
+    },
+    {
+      "id": "repair-applied-when-clean",
+      "kind": "resolve-repair",
+      "mode": "ideation",
+      "note": "A repair that passes re-validation replaces the original (single repair pass, then clean).",
+      "input": {
+        "studyType": "In Vitro Study",
+        "original": [
+          {
+            "full_statement": "Does elevated bisphenol A correlate with oxidative stress compared with baseline conditions?",
+            "population": "HepG2 cells",
+            "exposure": "bisphenol A",
+            "comparison": "baseline conditions",
+            "outcome": "oxidative stress"
+          }
+        ],
+        "repaired": [
+          {
+            "full_statement": "Does bisphenol A treatment increase oxidative stress in HepG2 cells compared with vehicle control?",
+            "framing": "group_contrast",
+            "population": "HepG2 cells",
+            "exposure": "bisphenol A treatment",
+            "comparison": "vehicle control",
+            "outcome": "oxidative stress"
+          }
+        ]
+      },
+      "expectApplied": true
+    },
+    {
+      "id": "repair-rejected-wrong-length",
+      "kind": "resolve-repair",
+      "mode": "ideation",
+      "note": "A repair returning a different number of questions is a malformed repair and is rejected wholesale.",
+      "input": {
+        "studyType": "In Vitro Study",
+        "original": [
+          {
+            "full_statement": "Q1?",
+            "population": "a",
+            "exposure": "b",
+            "comparison": "Not Required",
+            "outcome": "c"
+          },
+          {
+            "full_statement": "Q2?",
+            "population": "a",
+            "exposure": "b",
+            "comparison": "Not Required",
+            "outcome": "c"
+          }
+        ],
+        "repaired": [
+          {
+            "full_statement": "Q1?",
+            "population": "a",
+            "exposure": "b",
+            "comparison": "Not Required",
+            "outcome": "c"
+          }
+        ]
+      },
+      "expectApplied": false
+    },
+    {
+      "id": "repair-components-applied-when-clean",
+      "kind": "resolve-repair",
+      "mode": "components",
+      "note": "Extraction repair passes only when the repaired components re-validate clean.",
+      "input": {
+        "question": "What is the effect of lead exposure on IQ in children?",
+        "studyType": "Systematic Review",
+        "framing": "dose_response",
+        "original": {
+          "population": "children",
+          "exposure": "highest quartile of lead exposure",
+          "comparison": "lowest quartile",
+          "outcome": "IQ"
+        },
+        "repaired": {
+          "population": "children",
+          "exposure": "lead exposure",
+          "comparison": "highest versus lowest quartile",
+          "outcome": "IQ",
+          "quantifiers_and_modifiers": {
+            "exposure_modifiers": "Not Specified"
+          }
+        }
+      },
+      "expectApplied": true
+    },
+    {
+      "id": "repair-synthesis-applied-when-clean",
+      "kind": "resolve-repair",
+      "mode": "synthesis",
+      "note": "Synthesis repair replaces the statement only when the rewritten statement re-validates clean.",
+      "input": {
+        "original": {
+          "semantic_statement": "Does bisphenol A correlate with oxidative stress compared with vehicle control?",
+          "naturalised_peco": {
+            "population": "HepG2 cells",
+            "exposure": "bisphenol A",
+            "comparison": "vehicle control",
+            "outcome": "oxidative stress"
+          }
+        },
+        "repaired": {
+          "semantic_statement": "Does bisphenol A treatment increase oxidative stress biomarkers in HepG2 cells compared with vehicle control?",
+          "framing": "group_contrast",
+          "naturalised_peco": {
+            "population": "HepG2 cells",
+            "exposure": "bisphenol A treatment",
+            "comparison": "vehicle control",
+            "outcome": "oxidative stress biomarkers"
+          }
+        }
+      },
+      "expectApplied": true
+    },
+    {
+      "id": "utils-escape-html",
+      "kind": "escape",
+      "note": "HTML escaping utility: model output reaching innerHTML must never inject markup.",
+      "input": "<script>alert(\"x & y\")</script>",
+      "mustEqual": "&lt;script&gt;alert(&quot;x &amp; y&quot;)&lt;/script&gt;"
+    },
+    {
+      "id": "utils-json-extract-wrapped",
+      "kind": "json-extract",
+      "note": "JSON extraction utility: conversational preamble plus a markdown fence must still yield the payload (multi-pass deserializer).",
+      "input": "Certainly! Here is the JSON you asked for:\n```json\n{\"population\": \"rats\", \"dose\": \"5mg/kg\"}\n```\nLet me know if you need anything else.",
+      "expectObject": {
+        "population": "rats",
+        "dose": "5mg/kg"
+      }
+    },
+    {
+      "id": "utils-peco-delimiters",
+      "kind": "peco-display",
+      "note": "Delimiter rendering: ' ; ' alternatives render as OR, ' & ' collectives render as AND.",
+      "input": "lead ; arsenic & cadmium",
+      "mustContain": [
+        "OR",
+        "AND",
+        "lead",
+        "arsenic",
+        "cadmium"
+      ]
+    },
+    {
+      "id": "anchor-normalise-term",
+      "kind": "anchor-normalise",
+      "note": "Ontology lookup key: matrix tags convert to prose, casing and whitespace collapse — the same term rendered two ways resolves once.",
+      "input": "  Lead {matrix:in:maternal blood} Exposure  ",
+      "mustEqual": "lead in maternal blood exposure",
+      "anchorable": [
+        [
+          "children",
+          true
+        ],
+        [
+          "Deltamethrin",
+          true
+        ],
+        [
+          "Not Specified",
+          false
+        ],
+        [
+          "Not Required",
+          false
+        ],
+        [
+          "N/A",
+          false
+        ],
+        [
+          "5mg/kg",
+          false
+        ],
+        [
+          "",
+          false
+        ]
+      ]
+    },
+    {
+      "id": "anchor-mesh-parse",
+      "kind": "anchor-parse",
+      "note": "MeSH descriptor lookup payload parses to {system, code, display}; the code is the descriptor URI's last segment.",
+      "input": [
+        {
+          "resource": "http://id.nlm.nih.gov/mesh/D007223",
+          "label": "Child"
+        },
+        {
+          "resource": "http://id.nlm.nih.gov/mesh/D005294",
+          "label": "Fetal Blood"
+        }
+      ],
+      "expectCodes": [
+        "D007223",
+        "D005294"
+      ],
+      "expectSystems": [
+        "MeSH",
+        "MeSH"
+      ],
+      "expectDisplays": [
+        "Child",
+        "Fetal Blood"
+      ]
+    },
+    {
+      "id": "anchor-exact-select",
+      "kind": "anchor-select",
+      "note": "Exact label match anchors deterministically without human intervention.",
+      "input": {
+        "term": "child",
+        "candidates": [
+          {
+            "system": "MeSH",
+            "code": "D007231",
+            "display": "Children"
+          },
+          {
+            "system": "MeSH",
+            "code": "D007223",
+            "display": "Child"
+          }
+        ]
+      },
+      "expectState": "anchored",
+      "expectCode": "D007223"
+    },
+    {
+      "id": "anchor-partial-select",
+      "kind": "anchor-select",
+      "note": "Multiple non-exact candidates are surfaced ranked for the human to pick (surface, don't guess).",
+      "input": {
+        "term": "lead exposure in children",
+        "candidates": [
+          {
+            "system": "MeSH",
+            "code": "D007223",
+            "display": "Child"
+          },
+          {
+            "system": "MeSH",
+            "code": "D007852",
+            "display": "Lead"
+          }
+        ]
+      },
+      "expectState": "partial",
+      "expectTopCode": "D007852"
+    },
+    {
+      "id": "anchor-no-match",
+      "kind": "anchor-select",
+      "note": "No candidates means unanchored — the human must consciously accept or override; never silently dropped.",
+      "input": {
+        "term": "vehicle control",
+        "candidates": []
+      },
+      "expectState": "unanchored"
+    },
+    {
+      "id": "anchor-resolve-nonblocking",
+      "kind": "anchor-resolve",
+      "note": "A failing terminology endpoint degrades to unanchored entries — the pipeline never stalls on the ontology server.",
+      "input": {
+        "terms": [
+          "children"
+        ],
+        "fail": true
+      },
+      "expectStates": {
+        "children": "unanchored"
+      }
+    },
+    {
+      "id": "anchor-cache-hit",
+      "kind": "anchor-resolve",
+      "note": "Resolved terms are cached; a second resolution of the same term makes no network call.",
+      "input": {
+        "terms": [
+          "children",
+          "children"
+        ],
+        "fail": false,
+        "callTwice": true
+      },
+      "expectFetchCount": 1,
+      "expectStates": {
+        "children": "anchored"
+      }
+    },
+    {
+      "id": "anchor-user-override",
+      "kind": "anchor-override",
+      "note": "Human override: a term can be deliberately accepted as user-defined free text — provenance visible, registry enumerable so it persists.",
+      "input": {
+        "term": "vehicle control"
+      },
+      "expectState": "user_defined",
+      "mustPersist": true
+    },
+    {
+      "id": "anchor-link-resolution",
+      "kind": "anchor-link",
+      "note": "Anchors link to the official authority browser (port of the cohort analyzer's terminologyLinks).",
+      "input": {
+        "system": "MeSH",
+        "code": "D007223"
+      },
+      "mustEqual": "https://id.nlm.nih.gov/mesh/D007223"
+    },
+    {
+      "id": "anchor-chip-html",
+      "kind": "anchor-chip",
+      "note": "Chip rendering per state: anchored (code visible), unanchored (override affordance), user-defined (explicit provenance).",
+      "input": {
+        "anchored": {
+          "term": "child",
+          "state": "anchored",
+          "anchor": {
+            "system": "MeSH",
+            "code": "D007223",
+            "display": "Child"
+          },
+          "candidates": []
+        },
+        "unanchored": {
+          "term": "vehicle control",
+          "state": "unanchored",
+          "anchor": null,
+          "candidates": []
+        },
+        "userDefined": {
+          "term": "vehicle control",
+          "state": "user_defined",
+          "anchor": null,
+          "candidates": []
+        }
+      },
+      "anchoredMustContain": [
+        "D007223",
+        "MeSH"
+      ],
+      "unanchoredMustContain": [
+        "anchor-override"
+      ],
+      "userDefinedMustContain": [
+        "user-defined"
+      ]
+    },
+    {
+      "id": "anchors-persist-in-export",
+      "kind": "anchor-export",
+      "note": "Anchors are durable protocol metadata (opposite of validation flags): they MUST survive serialisation into saves and exports.",
+      "input": {
+        "registry": [
+          {
+            "term": "child",
+            "state": "anchored",
+            "anchor": {
+              "system": "MeSH",
+              "code": "D007223",
+              "display": "Child"
+            },
+            "candidates": []
+          }
+        ],
+        "terms": [
+          "child"
+        ]
+      },
+      "expectExport": {
+        "child": {
+          "state": "anchored",
+          "system": "MeSH",
+          "code": "D007223",
+          "display": "Child",
+          "source": "mesh"
+        }
+      }
+    },
+    {
+      "id": "anchor-attach-enumerable",
+      "kind": "attach-anchor",
+      "note": "attachAnchor is the durable counterpart of attachFlags: the anchor property is enumerable and JSON-serialisable by design.",
+      "input": {
+        "population": "children"
+      },
+      "anchor": {
+        "system": "MeSH",
+        "code": "D007223",
+        "display": "Child"
+      }
+    },
+    {
+      "id": "anchor-split-peco-terms",
+      "kind": "anchor-split",
+      "note": "Component values use & (AND) and ; (OR) delimiters; each term anchors independently — the compound string is never a lookup key.",
+      "input": "lead ; arsenic & cadmium",
+      "mustEqual": [
+        "lead",
+        "arsenic",
+        "cadmium"
+      ]
+    },
+    {
+      "id": "anchor-plural-fallback",
+      "kind": "anchor-plural",
+      "note": "The NLM descriptor lookup matches label words only — inflections miss. The client deterministically retries singular forms (children -> child), surfacing a near-match the human confirms (partial, not silently anchored).",
+      "input": {
+        "term": "children",
+        "fetches": {
+          "children": [],
+          "child": [
+            {
+              "resource": "http://id.nlm.nih.gov/mesh/D002648",
+              "label": "Child"
+            }
+          ]
+        }
+      },
+      "expectRequested": [
+        "children",
+        "child"
+      ],
+      "expectState": "partial",
+      "expectTopCode": "D002648"
+    },
+    {
+      "id": "anchor-plural-fallback-irregular",
+      "kind": "anchor-plural",
+      "note": "Irregular plural map covers the common PECO population terms (mice -> mouse, women -> woman).",
+      "input": {
+        "term": "mice",
+        "fetches": {
+          "mice": [],
+          "mouse": [
+            {
+              "resource": "http://id.nlm.nih.gov/mesh/D009157",
+              "label": "Mice"
+            }
+          ]
+        }
+      },
+      "expectRequested": [
+        "mice",
+        "mouse"
+      ],
+      "expectState": "anchored",
+      "expectCode": "D009157"
+    },
+    {
+      "id": "session-draft-roundtrip",
+      "kind": "session-draft",
+      "note": "Session autosave: a draft built from the workflow state survives serialisation and re-applies losslessly (research question, components, study type, frozen flags).",
+      "input": {
+        "currentStep": "step-clarity",
+        "completedSteps": [
+          "step-ideation"
+        ],
+        "scopeText": "lead and IQ",
+        "studyType": {
+          "id": "systematic_review",
+          "name": "Systematic Review"
+        },
+        "suggestions": [
+          {
+            "full_statement": "What is the effect of lead on IQ?",
+            "population": "children",
+            "exposure": "lead",
+            "comparison": "Not Required",
+            "outcome": "IQ"
+          }
+        ],
+        "researchQuestion": "What is the effect of lead on IQ in children?",
+        "framing": "group_contrast",
+        "peco": {
+          "population": "children",
+          "exposure": "lead",
+          "comparison": "Not Required",
+          "outcome": "IQ"
+        },
+        "frozen": {
+          "population": false,
+          "exposure": true,
+          "comparison": false,
+          "outcome": false
+        }
+      },
+      "expectStep": "step-clarity",
+      "expectQuestion": "What is the effect of lead on IQ in children?",
+      "expectFrozen": {
+        "population": false,
+        "exposure": true,
+        "comparison": false,
+        "outcome": false
+      }
+    },
+    {
+      "id": "session-draft-corrupt-rejected",
+      "kind": "session-draft",
+      "note": "A corrupt or truncated draft payload NEVER throws and never restores garbage — the app starts fresh.",
+      "input": null,
+      "mustReject": [
+        "not-json-at-all",
+        "{\"savedAt\":",
+        "{}",
+        "[]",
+        "{\"savedAt\":\"x\",\"clarity\":{\"researchQuestion\":42}}"
+      ],
+      "expectApplied": false
+    },
+    {
+      "id": "session-draft-flags-not-persisted",
+      "kind": "session-flags",
+      "note": "Transient validation flags ride non-enumerably, so a saved draft serialises the question WITHOUT its flags — on resume the user re-analyses instead of inheriting stale diagnostics.",
+      "input": {
+        "researchQuestion": "Q?",
+        "peco": {
+          "population": "children"
+        }
+      }
+    },
+    {
+      "id": "safe-storage-never-throws",
+      "kind": "safe-storage",
+      "note": "file:// Safari and locked-down browsers throw on window.localStorage access — a typeof-check does not survive a throwing getter. safeStorage probes and falls back to memory: the app runs (without persistence) instead of dying at startup. In Node the fallback path is exercised directly.",
+      "input": {
+        "key": "peco_probe_key",
+        "value": "probe-value"
+      }
+    }
+  ]
+}

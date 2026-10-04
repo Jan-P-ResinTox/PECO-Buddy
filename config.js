@@ -1,5 +1,4 @@
-export const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-export const EBI_OLS_BASE_URL = 'https://www.ebi.ac.uk/ols4/api';
+export const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent';
 
 export const PECO_MAP = {
     population: { label: "Population", color: "#ec4899", purpose: "a population group (e.g., human, animal model), focusing on MeSH trees for 'Persons', 'Age Groups', or 'Organisms'" },
@@ -9,7 +8,5 @@ export const PECO_MAP = {
 };
 
 export const MODE_CONFIG = {
-    peco_toolkit: { title: "PECO Toolkit", subtitle: "A guided workflow from concept to A Final PECO Question" },
-    review_peco: { title: "Review PECO", subtitle: "Tools for manuscript consistency auditing" },
-    nlp: { title: "NLP Toolkit", subtitle: "Manage custom term lists for local analysis" }
+    peco_toolkit: { title: "PECO Toolkit", subtitle: "A guided workflow from concept to a final PECO question" }
 };

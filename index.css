@@ -1,16 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-    --primary-color: #0d9488;
-    --primary-hover: #0f766e;
-    --primary-light: #ccfbf1;
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-light: #e0e7ff;
     --secondary-color: #2563eb; 
     --secondary-hover: #1d4ed8;
     --accent-color: #f59e0b;
     --danger-color: #ef4444;
-    --text-main: #1e293b; 
+    --text-main: #0f172a; 
     --text-muted: #64748b; 
-    --bg-body: #f8fafc;
+    --bg-body: #f1f5f9;
     --sidebar-bg: #ffffff;
     --radius-lg: 1rem;
     --radius-xl: 2rem;
@@ -28,10 +28,10 @@ body.font-size-lg { --font-scale: 1.25; }
 
 body {
     background-color: var(--bg-body);
-    background-image: radial-gradient(at 0% 0%, rgba(13, 148, 136, 0.02) 0px, transparent 50%);
+    background-image: radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.02) 0px, transparent 50%);
     background-attachment: fixed;
     color: var(--text-main);
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-size: var(--base-fs);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
@@ -54,6 +54,120 @@ input, textarea, select {
     position: relative;
     overflow-x: hidden;
 }
+
+/* QR matrix images: keep modules crisp when the browser scales them */
+.qr-matrix {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* Collapsible Sidebar (icon rail mode) */
+#app-sidebar {
+    transition: width 0.25s ease;
+}
+
+#app-sidebar.sidebar-collapsed {
+    width: 5.25rem !important;
+    overflow-x: visible;
+}
+
+#app-main-content.sidebar-collapsed {
+    margin-left: 5.25rem !important;
+}
+
+#app-sidebar.sidebar-collapsed .sidebar-link span,
+#app-sidebar.sidebar-collapsed .sidebar-brand-text,
+#app-sidebar.sidebar-collapsed .sidebar-section-label,
+#app-sidebar.sidebar-collapsed .sidebar-footer-text {
+    display: none;
+}
+
+#app-sidebar.sidebar-collapsed .sidebar-link {
+    justify-content: center;
+    padding: 1.25rem 0;
+    margin: 0.4rem 0.5rem;
+}
+
+#app-sidebar.sidebar-collapsed .sidebar-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.5rem 0.5rem 1.5rem;
+}
+
+#app-sidebar.sidebar-collapsed #sidebar-collapse-btn {
+    margin-left: 0;
+}
+
+/* QR Studio: transient highlight on the metadata inputs when the
+   "Author, Year & PECO Setup" chip jumps to them */
+.qr-input-highlight {
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35) !important;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+/* Computable Cohort logic tree (Visual Logic Tree) */
+.ltree {
+    --lt-line: #cbd5e1;
+    position: relative;
+}
+
+.ltree-children {
+    position: relative;
+    margin-left: 2rem;
+}
+
+.ltree-children > * {
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: 0.85rem;
+}
+
+.ltree-children > *::after {
+    /* vertical spine segment */
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 2px solid var(--lt-line);
+}
+
+.ltree-children > *::before {
+    /* horizontal elbow into the node */
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 1.6rem;
+    width: 2rem;
+    height: 0;
+    border-top: 2px solid var(--lt-line);
+}
+
+.ltree-children > *:last-child::after {
+    bottom: auto;
+    height: 1.6rem;
+}
+
+.ltree-root-children { --lt-line: #a5b4fc; }
+.ltree-branch-children.ltree-inc { --lt-line: #6ee7b7; }
+.ltree-branch-children.ltree-exc { --lt-line: #fda4af; }
+
+.ltree-operator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #ffffff;
+    flex-shrink: 0;
+}
+
 
 /* Primary Action Buttons - TEAL */
 .btn-teal, 
@@ -254,6 +368,10 @@ input, textarea, select {
     padding: 2rem;
     overflow-y: auto;
     flex-grow: 1;
+    /* Without min-height: 0 a flex child refuses to shrink below its content
+       height, so long content overflows the max-height modal card instead of
+       scrolling inside it. */
+    min-height: 0;
 }
 
 /* Study Type Grid */
@@ -360,40 +478,275 @@ input, textarea, select {
 }
 
 /* Carousel */
-.suggestion-carousel {
-    position: relative;
-    padding: 0 20px;
+/* Advisory stack: all suggestion cards render for scanning and comparing. */
+.suggestion-stack .suggestion-card {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-
-.suggestion-slide {
-    display: none;
-}
-.suggestion-slide.active {
-    display: block;
-}
-
-.carousel-nav-btn {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: white !important;
-    border: 1px solid #e2e8f0 !important;
-    z-index: 20;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.carousel-nav-btn:hover:not(:disabled) {
-    border-color: var(--primary-color) !important;
-    color: var(--primary-color) !important;
-}
-
-.carousel-nav-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
+.suggestion-stack .suggestion-card:hover {
+    border-color: #a5b4fc;
+    box-shadow: 0 2px 8px 0 rgba(99, 102, 241, 0.08);
 }
 
 /* Font Setting Previews - Fix representing the implementation */
 .font-size-btn[data-size="sm"] .btn-preview { font-size: 0.85rem !important; }
 .font-size-btn[data-size="md"] .btn-preview { font-size: 1rem !important; }
 .font-size-btn[data-size="lg"] .btn-preview { font-size: 1.25rem !important; }
+
+/* Toasts - without these, toast messages render as plain text at the bottom of the page */
+#toast-container {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 22rem;
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 0.9rem 1.25rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1.4;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transform: translateX(1.25rem);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: auto;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast.success { background: #047857; }
+.toast.error { background: #b91c1c; }
+.toast.warning { background: #b45309; }
+.toast.info { background: #0f172a; }
+
+.toast-close-btn {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0.15rem;
+}
+
+.toast-close-btn:hover {
+    color: #ffffff;
+}
+
+/* Loading Spinner - used by buttons and loading panels */
+.loader {
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 3px solid rgba(13, 148, 136, 0.25);
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: loader-spin 0.8s linear infinite;
+}
+
+@keyframes loader-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Fade-in entrance for rendered views and progress gauges */
+@keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(0.5rem); }
+    to { opacity: 1; transform: none; }
+}
+
+.animate-fade-in {
+    animation: fade-in-up 0.35s ease-out;
+}
+
+/* ============================================================
+   Standalone-analyzer look harmonisation.
+   The cohort analyzer's design language is compact: rounded-xl
+   cards, semibold headings, quiet shadows. PECO Buddy's templates
+   carry oversized arbitrary radii and 800-weight type; these
+   overrides retune them toward the analyzer without rewriting
+   every template class.
+   ============================================================ */
+.rounded-\[2\.5rem\],
+.rounded-\[2rem\] {
+    border-radius: 1rem !important;
+}
+
+.rounded-3xl {
+    border-radius: 1.25rem !important;
+}
+
+.font-extrabold {
+    font-weight: 700 !important;
+}
+
+/* Tailwind CDN also emits heavier caption labels; keep headings
+   readable but visually closer to the analyzer's semibold voice. */
+h1.font-extrabold, h2.font-extrabold, h3.font-extrabold, h4.font-extrabold {
+    font-weight: 700 !important;
+}
+/* ============================================================
+   Activity status chip (rigor layer UX): one chip showing every
+   live phase — running label + elapsed seconds, retry reasons,
+   repair activity, and the terminal done/error state.
+   ============================================================ */
+.activity-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 420px;
+    padding: 8px 14px;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.2s ease;
+}
+
+.activity-chip.activity-hidden {
+    display: none;
+}
+
+.activity-chip.activity-running {
+    background: #f0fdfa;
+    border-color: #99f6e4;
+    color: #0f766e;
+}
+
+.activity-chip.activity-done {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #047857;
+}
+
+.activity-chip.activity-error {
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: #be123c;
+}
+
+.activity-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+.activity-running .activity-dot {
+    animation: activity-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes activity-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.75); }
+}
+
+/* ============================================================
+   Ontology anchor chips: per-term provenance rendered next to
+   every AI suggestion. Anchored = verified descriptor, partial
+   = candidates await a human pick, unanchored = explicit human
+   decision required, user-defined = deliberate free-text choice.
+   ============================================================ */
+.anchor-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border: 1px solid transparent;
+}
+
+.anchor-chip i {
+    font-size: 8px;
+}
+
+.anchor-chip-anchored {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+}
+
+.anchor-chip-anchored .anchor-chip-link {
+    color: #6366f1;
+    margin-left: 2px;
+}
+
+/* Amber is reserved for rigor DEFECTS. Anchor decisions (partial,
+   unanchored) are informational — indigo, never a false alarm. */
+.anchor-chip-partial {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+}
+
+.anchor-chip-unanchored {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+}
+
+.anchor-chip-user {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #475569;
+}
+
+.anchor-chip-btn {
+    margin-left: 4px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-size: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: transparent;
+    border: 1px solid currentColor;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.anchor-chip-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Workflow progress: a completed step reads as done (slate + check),
+   the active step keeps the emerald badge — orientation, not steering. */
+.workflow-step.completed .step-number {
+    background: #475569;
+}
+
+.step-done-icon {
+    display: none;
+    margin-left: 8px;
+    font-size: 0.85em;
+}
+
+.workflow-step.completed .step-done-icon {
+    display: inline-block;
+}

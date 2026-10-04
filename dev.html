@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en-GB" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PECO-Buddy Closed Pilot Alpha 0.1.0</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      // Standalone-analyzer look: the teal scale is remapped to the analyzer's
+      // indigo accent, and its compact shadow scale (2xs/xs) is registered.
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              teal: {
+                50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
+                400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
+                800: '#3730a3', 900: '#312e81', 950: '#1e1b4b'
+              }
+            },
+            boxShadow: {
+              '2xs': '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+              'xs': '0 1px 3px 0 rgba(0, 0, 0, 0.05)'
+            }
+          }
+        }
+      }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.5.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html-to-docx-js@1.8.0/dist/html-to-docx.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.4/dist/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="index.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://esm.sh/@google/genai@^1.35.0"
+      }
+    }
+    </script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="antialiased bg-slate-100 text-slate-900">
+
+    <aside id="app-sidebar" class="fixed top-0 left-0 z-40 w-72 h-screen bg-white border-r border-slate-200 flex flex-col overflow-y-auto">
+        <div class="sidebar-header flex items-center gap-4 p-6 pb-8 shrink-0">
+            <div class="w-12 h-12 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-lg shrink-0">
+                <i class="fa-solid fa-robot fa-2x"></i>
+            </div>
+            <div class="sidebar-brand-text">
+                 <h1 class="text-xl font-extrabold text-slate-800">PECO-Buddy</h1>
+                 <p class="text-[10px] font-bold uppercase tracking-widest text-teal-600">Closed Pilot Alpha 0.1.0</p>
+            </div>
+            <button id="sidebar-collapse-btn" class="ml-auto w-9 h-9 rounded-full text-slate-300 hover:text-teal-600 hover:bg-slate-50 transition-all flex items-center justify-center shrink-0" data-tooltip="Collapse sidebar" aria-label="Collapse sidebar">
+                <i id="sidebar-collapse-icon" class="fa-solid fa-angles-left text-xs"></i>
+            </button>
+        </div>
+
+        <nav id="sidebar-nav" class="flex-grow px-4 space-y-1">
+            <p class="sidebar-section-label px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Workspaces</p>
+            <a href="#" data-mode="peco_toolkit" data-tooltip="PECO Toolkit" class="sidebar-link active"><i class="fa-solid fa-pen-to-square"></i><span>PECO Toolkit</span></a>
+        </nav>
+
+        <div class="mt-auto p-4 space-y-1 border-t border-slate-100">
+             <div class="pt-2">
+                 <a href="#" id="show-settings-btn" data-tooltip="Settings" class="sidebar-link"><i class="fa-solid fa-cog"></i><span>Settings</span></a>
+                 <a href="#" id="show-manual-btn" data-tooltip="User Manual" class="sidebar-link"><i class="fa-solid fa-book-open"></i><span>User Manual</span></a>
+                 <a href="#" id="show-rationale-btn" data-tooltip="Version Rationale" class="sidebar-link"><i class="fa-solid fa-code-merge"></i><span>Version Rationale</span></a>
+                 <a href="#" id="show-copyright-btn" data-tooltip="Copyright Notice" class="sidebar-link"><i class="fa-solid fa-copyright"></i><span>Copyright Notice</span></a>
+             </div>
+
+             <div class="p-4 mt-2 border-t border-slate-50 bg-slate-50/50">
+                 <p class="sidebar-footer-text text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">PECO-Buddy Closed Pilot Alpha 0.1.0</p>
+             </div>
+        </div>
+    </aside>
+
+    <div id="app-main-content" class="sm:ml-72 min-h-screen flex flex-col">
+        <div id="app-container" class="mx-auto p-6 lg:p-12 w-full flex-grow flex flex-col">
+            <header class="flex justify-between items-end mb-10">
+                <div>
+                    <p id="header-subtitle" class="text-sm font-bold text-teal-600 uppercase tracking-wider mb-1">Workspace</p>
+                    <h1 id="header-title" class="text-4xl font-extrabold text-slate-900 tracking-tight">PECO Toolkit</h1>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div id="activity-chip" class="activity-chip activity-hidden" role="status" aria-live="polite">
+                        <span class="activity-dot"></span>
+                        <span data-activity-text></span>
+                    </div>
+                    <button id="toggle-tooltips-btn" class="w-10 h-10 rounded-full bg-white text-slate-400 shadow-sm hover:text-teal-600 hover:shadow-md transition-all flex items-center justify-center relative group" title="Toggle Tooltips">
+                        <i class="fa-solid fa-comment-dots text-lg"></i>
+                        <span class="absolute top-0 right-0 w-3 h-3 bg-teal-500 rounded-full border-2 border-white status-indicator" style="display: none;"></span>
+                    </button>
+                </div>
+            </header>
+            <main id="main-content" class="flex-grow"></main>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+    <div id="modal-placeholder"></div>
+    <div id="global-tooltip" class="hidden absolute z-50 px-3 py-2 text-xs font-semibold text-white bg-slate-800 rounded-lg shadow-xl border border-white/10 pointer-events-none transition-opacity duration-150"></div>
+
+    <script type="module" src="./index.js"></script>
+</body>
+</html>

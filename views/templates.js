@@ -4,7 +4,7 @@ export const templates = {
         <div class="w-full">
             <div id="step-ideation" class="workflow-step">
                 <div class="step-header">
-                    <div class="step-number">Step 1</div>
+                    <div class="step-number">Step 1 <i class="fa-solid fa-check step-done-icon" aria-hidden="true"></i></div>
                     <div>
                         <h3 class="text-2xl font-bold text-slate-800">Ideation</h3>
                         <p class="text-[12px] text-slate-500 uppercase font-bold tracking-widest">Define research scope and methodology</p>
@@ -14,7 +14,7 @@ export const templates = {
             </div>
             <div id="step-clarity" class="workflow-step">
                 <div class="step-header">
-                    <div class="step-number">Step 2</div>
+                    <div class="step-number">Step 2 <i class="fa-solid fa-check step-done-icon" aria-hidden="true"></i></div>
                     <div>
                         <h3 class="text-2xl font-bold text-slate-800">Analysis</h3>
                         <p class="text-[12px] text-slate-500 uppercase font-bold tracking-widest">Extraction, logic audit & advisory</p>
@@ -24,7 +24,7 @@ export const templates = {
             </div>
             <div id="step-peco-workshop" class="workflow-step">
                 <div class="step-header">
-                    <div class="step-number">Step 3</div>
+                    <div class="step-number">Step 3 <i class="fa-solid fa-check step-done-icon" aria-hidden="true"></i></div>
                     <div>
                         <h3 class="text-2xl font-bold text-slate-800">Outputs</h3>
                         <p class="text-[12px] text-slate-500 uppercase font-bold tracking-widest">Protocol validation and transparency report</p>
@@ -34,78 +34,20 @@ export const templates = {
             </div>
         </div>
     `,
-    reviewerToolkit: `
-        <div id="reviewer-toolkit-container" class="space-y-12">
-            <div class="bg-white p-10 rounded-[3rem] border shadow-sm">
-                <h4 class="text-[12px] font-extrabold uppercase text-slate-400 tracking-widest mb-10 flex items-center gap-3">
-                    <i class="fa-solid fa-file-shield text-teal-600"></i> Consistency Auditor
-                </h4>
-                <div class="flex flex-col sm:flex-row items-center gap-8">
-                    <div class="flex-grow w-full">
-                        <label for="audit-file-upload" class="flex flex-col items-center justify-center w-full h-40 border-2 border-slate-200 border-dashed rounded-[2rem] cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                <i class="fa-solid fa-cloud-arrow-up text-slate-400 text-3xl mb-3"></i>
-                                <p class="text-sm text-slate-500 font-bold mb-1">Upload Manuscript</p>
-                                <p class="text-[10px] text-slate-400 uppercase font-bold">PDF or DOCX</p>
-                            </div>
-                            <input id="audit-file-upload" type="file" class="hidden" accept=".pdf,.docx" />
-                        </label>
-                        <p id="audit-file-name" class="mt-4 text-center text-xs font-bold text-teal-600"></p>
-                    </div>
-                    <button id="run-audit-btn" class="w-full sm:w-auto bg-teal-600 text-white px-12 py-6 rounded-[2rem] font-extrabold uppercase text-xs tracking-widest shadow-lg hover:bg-teal-700 transition-all flex items-center justify-center gap-3">
-                        <i class="fa-solid fa-magnifying-glass-chart"></i> Start Global Audit
-                    </button>
-                </div>
-            </div>
-            <div id="audit-report-container"></div>
-        </div>
-    `,
-    nlpToolkit: `
-        <div id="nlp-toolkit-container" class="space-y-12">
-            <div class="bg-white p-10 rounded-[3rem] border shadow-sm">
-                <h4 class="text-[12px] font-extrabold uppercase text-slate-400 tracking-widest mb-10">Local Vocabulary Manager</h4>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                    <div class="md:col-span-2">
-                        <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Terms (separate with ;)</label>
-                        <input type="text" id="nlp-term-input" class="w-full p-4 bg-slate-50 border rounded-xl text-sm outline-none focus:border-teal-500 shadow-inner" placeholder="e.g., Lead; Pb; Heavy Metals">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Category</label>
-                        <select id="nlp-category-select" class="w-full p-4 bg-slate-50 border rounded-xl text-sm outline-none focus:border-teal-500 shadow-inner">
-                            <option value="population">Population</option>
-                            <option value="exposure">Exposure</option>
-                            <option value="comparison">Comparison</option>
-                            <option value="outcome">Outcome</option>
-                        </select>
-                    </div>
-                    <button id="add-nlp-term-btn" class="bg-slate-800 text-white py-4 rounded-xl font-extrabold uppercase text-[10px] tracking-widest hover:bg-slate-900 transition-all">Add Rules</button>
-                </div>
-            </div>
-            <div class="bg-white p-10 rounded-[3rem] border shadow-sm">
-                <div class="flex justify-between items-center mb-8">
-                    <div class="flex items-center gap-6">
-                        <h4 class="text-[12px] font-extrabold uppercase text-slate-400 tracking-widest">Ruleset Index</h4>
-                        <div class="relative">
-                            <input type="text" id="nlp-search-input" class="pl-10 pr-4 py-2 bg-slate-50 border rounded-xl text-xs outline-none focus:border-teal-500" placeholder="Search terms...">
-                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
-                        </div>
-                    </div>
-                    <div class="flex gap-3">
-                        <button id="import-nlp-rules-btn" class="px-6 py-2 border rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"><i class="fa-solid fa-file-import mr-2"></i> Import JSON</button>
-                        <button id="export-nlp-rules-btn" class="px-6 py-2 border rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"><i class="fa-solid fa-file-export mr-2"></i> Export JSON</button>
-                        <input type="file" id="import-nlp-rules-input" class="hidden" accept=".json">
-                    </div>
-                </div>
-                <div id="nlp-table-container" class="overflow-hidden border rounded-2xl"></div>
-                <div id="nlp-pagination-controls" class="mt-8 flex justify-between items-center"></div>
-            </div>
-        </div>
-    `,
     ideationView: `
         <div class="space-y-12">
             <div class="bg-slate-50 p-12 rounded-[3rem] border border-slate-100 shadow-inner">
                 <label class="block text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-6">Broad Research Scope</label>
                 <textarea id="ideation-scope-input" class="w-full p-8 text-xl font-bold border-none rounded-[2rem] bg-white shadow-sm focus:ring-2 focus:ring-teal-500 outline-none transition-all min-h-[160px]" placeholder="e.g., Effect of prenatal lead exposure on IQ in children..."></textarea>
+                <div class="mt-6 space-y-3">
+                    <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Try an example</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="ideation-example-chip bg-white border border-slate-200 rounded-full px-4 py-2 text-xs font-bold text-slate-600 hover:border-teal-400 hover:text-teal-700 transition-all" data-scope="Effect of asbestos on lung health in mine workers">Asbestos &amp; lung health in mine workers</button>
+                        <button type="button" class="ideation-example-chip bg-white border border-slate-200 rounded-full px-4 py-2 text-xs font-bold text-slate-600 hover:border-teal-400 hover:text-teal-700 transition-all" data-scope="Lead exposure and children's IQ">Lead exposure &amp; children's IQ</button>
+                        <button type="button" class="ideation-example-chip bg-white border border-slate-200 rounded-full px-4 py-2 text-xs font-bold text-slate-600 hover:border-teal-400 hover:text-teal-700 transition-all" data-scope="Effect of bisphenol A on oxidative stress in HepG2 cells">Bisphenol A &amp; oxidative stress in HepG2 cells</button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 leading-relaxed">New here? Describe the research scope in one or two broad sentences &mdash; the Ideation Engine suggests three structurally distinct questions for you to refine.</p>
+                </div>
             </div>
             <div id="ideation-phase-study-type" class="animate-fade-in space-y-10">
                 <div class="flex justify-between items-center">
@@ -116,6 +58,7 @@ export const templates = {
             <div class="flex flex-col gap-4">
                 <button id="generate-ideation-btn" class="w-full bg-teal-600 text-white py-6 rounded-[2.5rem] font-extrabold uppercase text-sm tracking-widest shadow-xl hover:bg-teal-700 transition-all">Generate Suggestions</button>
                 <button id="continue-own-question-btn" class="w-full bg-white text-slate-500 border border-slate-200 py-4 rounded-[2.5rem] font-extrabold uppercase text-xs tracking-widest hover:bg-slate-50 hover:text-slate-700 transition-all" disabled>Continue with my own question</button>
+                <p id="generate-hint" class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest min-h-[1rem]"></p>
             </div>
             <div id="ideation-results-container" class="space-y-6"></div>
         </div>
@@ -211,6 +154,39 @@ export const templates = {
                 -->
 
                 <section>
+                    <h4 class="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Semantic Formatting</h4>
+                    <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 flex items-center justify-between">
+                        <div class="mr-6">
+                            <label class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest">Matrix Tagging</label>
+                            <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">Tags biological matrices and measurement sites as {matrix:in:maternal blood} in AI output and rendering. Disable for plain descriptive text throughout.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" id="settings-matrix-tagging-toggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                        </label>
+                    </div>
+                </section>
+
+                <section>
+                    <h4 class="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Ontology Anchoring</h4>
+                    <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 flex items-center justify-between mb-6">
+                        <div class="mr-6">
+                            <label class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest">Anchor Terms in MeSH</label>
+                            <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">Every suggested term is resolved against the NLM MeSH descriptor lookup, so suggestions carry verified ontology codes instead of plausible guesses. Unanchored terms are visibly flagged — you can deliberately accept any term as unverified free text, and provenance travels with exports.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" id="settings-terminology-toggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                        </label>
+                    </div>
+                    <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
+                        <label for="settings-terminology-mesh-base" class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest">MeSH Lookup Endpoint</label>
+                        <p class="text-[10px] text-slate-400 mt-1 mb-3 leading-relaxed">Leave empty for the NLM public endpoint (id.nlm.nih.gov). Point at an internal terminology server if the working group hosts one.</p>
+                        <input type="text" id="settings-terminology-mesh-base" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="https://id.nlm.nih.gov/mesh/lookup/descriptor">
+                    </div>
+                </section>
+
+                <section>
                     <h4 class="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Co-Author Assistance Level</h4>
                     <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 mb-6">
                         <div class="flex justify-between items-end mb-4">
@@ -239,6 +215,35 @@ export const templates = {
                     </div>
                 </section>
                 
+                <section>
+                    <h4 class="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Sampling &amp; Token Budget</h4>
+                    <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 mb-6">
+                        <div class="flex justify-between items-end mb-4">
+                            <label for="settings-topp-slider" class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest">Nucleus Sampling (Top-P)</label>
+                            <span id="topp-level-display" class="text-sm font-bold text-teal-600">0.95</span>
+                        </div>
+                        <input type="range" id="settings-topp-slider" min="5" max="100" step="5" value="95" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-600 mb-2">
+                        <div class="flex justify-between text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                            <span>Focused (0.05)</span>
+                            <span>Balanced (0.95)</span>
+                            <span>Full Distribution (1.0)</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-4 leading-relaxed">Restricts sampling to the most probable token mass. Note: at Autonomy 0.0 (greedy/temperature 0) providers require top_p of 1, so the custom value is omitted automatically for those calls.</p>
+                    </div>
+                    <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
+                        <div class="flex justify-between items-end mb-4">
+                            <label for="settings-maxtokens-slider" class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest">Response Token Budget (Max Tokens)</label>
+                            <span id="maxtokens-level-display" class="text-sm font-bold text-teal-600">4096</span>
+                        </div>
+                        <input type="range" id="settings-maxtokens-slider" min="512" max="16384" step="256" value="4096" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-600 mb-2">
+                        <div class="flex items-center gap-4 mt-4">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">Manual Input:</span>
+                            <input type="number" id="settings-maxtokens-input" value="4096" min="256" max="65536" class="w-28 p-2 border rounded-lg text-xs">
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-4 leading-relaxed">Caps the maximum length of each provider response. Lower it for faster, cheaper responses. Large structured outputs (PECO advisory cards) automatically request a minimum of 8192 tokens so they are never truncated mid-JSON.</p>
+                    </div>
+                </section>
+
                 <section>
                     <h4 class="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Generation Variance</h4>
                     <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
@@ -286,18 +291,31 @@ export const templates = {
                                 <option value="openai">OpenAI (Native)</option>
                                 <option value="anthropic">Anthropic Claude (Native)</option>
                                 <option value="perplexity">Perplexity (Native)</option>
+                                <option value="mistral">Mistral AI (Native)</option>
                                 <option value="local">Local LLM / Custom Endpoint</option>
                             </select>
                         </div>
 
                         <div id="settings-config-fields" class="space-y-4">
                             <!-- Gemini Fields -->
-                            <div id="field-group-gemini" class="provider-field-group">
-                                <div class="flex justify-between items-end mb-2">
-                                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Gemini API Key</label>
-                                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-[10px] font-bold text-teal-600 hover:text-teal-700 hover:underline">Get your API-Key here</a>
+                            <div id="field-group-gemini" class="provider-field-group space-y-4">
+                                <div>
+                                    <div class="flex justify-between items-end mb-2">
+                                        <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Gemini API Key</label>
+                                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-[10px] font-bold text-teal-600 hover:text-teal-700 hover:underline">Get your API-Key here</a>
+                                    </div>
+                                    <input type="password" id="input-gemini-key" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="Paste Google API Key...">
                                 </div>
-                                <input type="password" id="input-gemini-key" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="Paste Google API Key...">
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Gemini Model Checkpoint (Pinned)</label>
+                                    <select id="settings-gemini-model" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-xs font-bold outline-none focus:border-teal-500 shadow-sm">
+                                        <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Pinned Stable & Fast - Recommended)</option>
+                                        <option value="gemini-flash-latest">Gemini Flash Latest</option>
+                                        <option value="gemini-3.8-flash">Gemini 3.8 Flash (Deep Reasoning)</option>
+                                        <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview (Complex Protocol Logic)</option>
+                                    </select>
+                                    <p class="text-[10px] text-slate-400 mt-2 ml-2">Version 0.1.0 pins stable snapshots to eliminate upstream dynamic alias drift and deserialization prolixity.</p>
+                                </div>
                             </div>
 
                             <!-- OpenAI Fields -->
@@ -345,6 +363,22 @@ export const templates = {
                                 </div>
                             </div>
 
+                            <!-- Mistral Fields -->
+                            <div id="field-group-mistral" class="provider-field-group hidden space-y-4">
+                                <div>
+                                    <div class="flex justify-between items-end mb-2">
+                                        <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Mistral API Key</label>
+                                        <a href="https://console.mistral.ai/api-keys/" target="_blank" class="text-[10px] font-bold text-teal-600 hover:text-teal-700 hover:underline">Get your API-Key here</a>
+                                    </div>
+                                    <input type="password" id="input-mistral-key" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="Paste Mistral API Key...">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Model Name</label>
+                                    <input type="text" id="input-mistral-model" class="w-full p-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm font-mono shadow-sm" placeholder="e.g. mistral-large-latest">
+                                    <p class="text-[10px] text-slate-400 mt-2 ml-2">Common checkpoints: mistral-large-latest, mistral-small-latest, open-mistral-nemo.</p>
+                                </div>
+                            </div>
+
                             <!-- Custom/Local Fields -->
                             <div id="field-group-custom" class="provider-field-group hidden space-y-4">
                                 <div>
@@ -370,6 +404,22 @@ export const templates = {
                         
                         <div id="provider-status-display" class="hidden mt-6 p-4 rounded-2xl text-center bg-emerald-50 border border-emerald-100">
                              <p class="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Settings Saved</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h4 class="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest mb-8">Connection Self-Test</h4>
+                    <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 space-y-6">
+                        <div>
+                            <label class="text-[12px] font-extrabold text-slate-500 uppercase tracking-widest block mb-2">Connection Self-Test</label>
+                            <p class="text-[10px] text-slate-400 leading-relaxed">Verify that the configured AI provider responds correctly.</p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <button id="test-ai-connection-btn" class="flex-1 py-4 bg-slate-800 text-white rounded-[1.5rem] text-[11px] font-extrabold uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg">Test AI Provider</button>
+                        </div>
+                        <div class="space-y-2 text-xs font-bold">
+                            <p id="ai-connection-status" class="text-slate-400">AI provider: not tested yet.</p>
                         </div>
                     </div>
                 </section>
@@ -409,12 +459,11 @@ export const templates = {
             <!-- Sidebar Navigation -->
             <div class="w-1/3 bg-slate-50 border-r border-slate-200 overflow-y-auto p-6 space-y-2 shrink-0">
                 <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-6 px-2">Manual Sections</h4>
-                <a href="#manual-intro" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">1. Welcome to PECO-Buddy!</a>
+                <a href="#manual-intro" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">1. Welcome to PECO-Buddy Closed Pilot Alpha 0.1.0</a>
                 <a href="#manual-step1" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">2. Step 1: Brainstorming (Ideation)</a>
                 <a href="#manual-step2" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">3. Step 2: Checking the Work (Logic Audit)</a>
                 <a href="#manual-step3" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">4. Step 3: The Final Result (Outputs)</a>
-                <a href="#manual-nlp" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">5. The Vocabulary Manager (NLP Toolkit)</a>
-                <a href="#manual-settings" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">6. Settings & Rules</a>
+                <a href="#manual-settings" class="block px-4 py-3 text-sm font-bold text-slate-600 hover:bg-teal-50 hover:text-teal-700 rounded-xl transition-colors">5. Settings & AI Models</a>
             </div>
             
             <!-- Main Content Area -->
@@ -425,81 +474,95 @@ export const templates = {
                 </div>
 
                 <section id="manual-intro" class="manual-section space-y-4">
-                    <h5 class="text-xl font-extrabold text-teal-600">1. Welcome to PECO-Buddy!</h5>
-                    <p class="text-slate-600 text-sm leading-relaxed">Hello! Think of PECO-Buddy as your super-smart science helper. When scientists want to study something (like if a new medicine works, or if a certain chemical is bad for you), they need a very clear question. We use a trick called <strong>PECO</strong> to make these questions perfect.</p>
+                    <h5 class="text-xl font-extrabold text-teal-600">1. Welcome to PECO-Buddy Closed Pilot Alpha 0.1.0!</h5>
+                    <p class="text-slate-600 text-sm leading-relaxed">PECO-Buddy is a cognitive scaffolding instrument designed for researchers, environmental toxicologists, and systematic reviewers. Grounded in the principle that semantic sovereignty must remain strictly with the human investigator, it assists in translating unstructured research questions into validated, MeSH-aligned PECO scoping matrices conforming to National Toxicology Program (NTP) Office of Health Assessment and Translation (OHAT) standards.</p>
                     <ul class="list-disc pl-5 text-slate-600 text-sm space-y-2">
-                        <li><strong>P</strong> is for <strong>Population</strong>: Who or what are we studying? (Like "mice" or "adult humans").</li>
-                        <li><strong>E</strong> is for <strong>Exposure</strong>: What are they coming into contact with? (Like "eating lots of sugar" or "a new medicine").</li>
-                        <li><strong>C</strong> is for <strong>Comparator</strong>: What are we comparing them to? (Like "people who eat no sugar" or "a fake medicine").</li>
-                        <li><strong>O</strong> is for <strong>Outcome</strong>: What happens at the end? (Like "getting a stomach ache" or "feeling better").</li>
+                        <li><strong>P (Population):</strong> Who or what is being investigated (species, strain, cohort, life-stage, geographic context).</li>
+                        <li><strong>E (Exposure):</strong> Environmental, chemical, or pharmaceutical agent with delivery vehicle/matrix and pathway.</li>
+                        <li><strong>C (Comparator):</strong> Unexposed baseline, vehicle control, or alternative reference threshold.</li>
+                        <li><strong>O (Outcome):</strong> Biological, toxicological, or clinical endpoint (distinguishing apical manifestations from molecular biomarkers).</li>
                     </ul>
-                    <p class="text-slate-600 text-sm leading-relaxed">PECO-Buddy helps you build these pieces step-by-step so your science project starts off on the right foot!</p>
                 </section>
 
                 <section id="manual-step1" class="manual-section space-y-4">
                     <h5 class="text-xl font-extrabold text-teal-600">2. Step 1: Brainstorming (Ideation)</h5>
-                    <p class="text-slate-600 text-sm leading-relaxed">This is where we start! You just need a basic idea.</p>
-                    <ol class="list-decimal pl-5 text-slate-600 text-sm space-y-2">
-                        <li><strong>Type your idea:</strong> In the big text box, type what you are curious about. For example: "Does eating carrots make your eyesight better?"</li>
-                        <li><strong>Pick a Study Type:</strong> Choose how you want to study this. Are you looking at animals (In Vivo), cells in a dish (In Vitro), or human populations (Epidemiological)?</li>
-                        <li><strong>Click "Generate PECO Questions":</strong> PECO-Buddy will think hard and give you 3 really good, scientific ways to ask your question.</li>
-                        <li><strong>Pick your favorite:</strong> Read the 3 options and click "Select & Continue" on the one you like best!</li>
-                    </ol>
+                    <p class="text-slate-600 text-sm leading-relaxed">Define the initial broad research scope and select your intended methodology (Systematic Review, In Vivo Animal, In Vitro, or Epidemiological Cohort). The Ideation Engine generates 3 structurally distinct research questions ending with formal interrogatives, mapping components without ungrounded extrapolations.</p>
                 </section>
 
                 <section id="manual-step2" class="manual-section space-y-4">
                     <h5 class="text-xl font-extrabold text-teal-600">3. Step 2: Checking the Work (Logic Audit)</h5>
-                    <p class="text-slate-600 text-sm leading-relaxed">Now that we have a good question, we need to make sure it's perfect. PECO-Buddy will act like a strict teacher and check our work.</p>
-                    <ol class="list-decimal pl-5 text-slate-600 text-sm space-y-2">
-                        <li><strong>Run the Audit:</strong> Click the button to start the check. PECO-Buddy will look at your Population, Exposure, Comparator, and Outcome.</li>
-                        <li><strong>Read the Feedback:</strong> PECO-Buddy will give you a score and tell you what is good and what needs fixing. It might say, "You said 'eyesight', but you need to be more specific, like 'visual acuity'."</li>
-                        <li><strong>Look at Suggestions:</strong> For each part (P, E, C, O), PECO-Buddy will give you new, better words to use. You can click the left and right arrows to see different ideas.</li>
-                        <li><strong>Sync the best ideas:</strong> If you like PECO-Buddy's ideas, click "Sync All to Protocol" to update your question with the new, fancy science words!</li>
-                    </ol>
+                    <p class="text-slate-600 text-sm leading-relaxed">The Logic Audit Engine examines components for ambiguity reduction. It provides 5 to 6 advisory cards per component with detailed scientific justifications and counter-considerations. You can freeze components that meet your criteria and synchronize suggestions directly into your protocol.</p>
                 </section>
 
                 <section id="manual-step3" class="manual-section space-y-4">
                     <h5 class="text-xl font-extrabold text-teal-600">4. Step 3: The Final Result (Outputs)</h5>
-                    <p class="text-slate-600 text-sm leading-relaxed">You did it! This is the final step where you get your shiny, new science question.</p>
-                    <ul class="list-disc pl-5 text-slate-600 text-sm space-y-2">
-                        <li><strong>Review Final Output:</strong> Click this button at the bottom of Step 2 to come here.</li>
-                        <li><strong>See your Question:</strong> You will see your final, perfect research question in a big box.</li>
-                        <li><strong>Full Transparency Report:</strong> Click this button to see a detailed report of everything you and PECO-Buddy did. It shows your final question, your PECO table, and a log of all the steps. You can even download this report to show your teacher or friends!</li>
-                    </ul>
-                </section>
-
-                <section id="manual-nlp" class="manual-section space-y-4">
-                    <h5 class="text-xl font-extrabold text-teal-600">5. The Vocabulary Manager (NLP Toolkit)</h5>
-                    <p class="text-slate-600 text-sm leading-relaxed">Sometimes you don't want to use the AI to check your work. Instead, you can create your very own dictionary of science words! This is called the NLP Toolkit.</p>
-                    <ul class="list-disc pl-5 text-slate-600 text-sm space-y-2">
-                        <li><strong>Add Words:</strong> Type in words (like "mice" or "lead") and tell PECO-Buddy if they belong to Population, Exposure, Comparator, or Outcome.</li>
-                        <li><strong>Build Your Rules:</strong> You can add as many words as you want to build a big list of rules. You can even import or export your lists to share with friends!</li>
-                        <li><strong>Use Your Dictionary:</strong> If you go to Settings and change your "Scientific Engine" to "NLP Vocabulary", PECO-Buddy will stop using the AI. Instead, it will only look for the exact words you put in this dictionary when checking your question in Step 2!</li>
-                    </ul>
+                    <p class="text-slate-600 text-sm leading-relaxed">View the final synthesised research question and PECO matrix. Generate a complete Transparency Report documenting interaction logs, timestamps, engine models, and applied heuristics. Exports are available in JSON, PDF, and clipboard format.</p>
                 </section>
 
                 <section id="manual-settings" class="manual-section space-y-4">
-                    <h5 class="text-xl font-extrabold text-teal-600">6. Settings & Rules</h5>
-                    <p class="text-slate-600 text-sm leading-relaxed">Want to change how PECO-Buddy works? Click "Settings" in the left menu.</p>
-                    <ul class="list-disc pl-5 text-slate-600 text-sm space-y-2">
-                        <li><strong>General Tab:</strong> Here you can change the text size (make it bigger or smaller) and choose how much help you want from the AI (from "Novice" where it helps a lot, to "Expert" where it just gives quick tips).</li>
-                        <li><strong>Heuristics & Controls Tab:</strong> This is for advanced users! You can give PECO-Buddy special rules to follow when it checks your work. For example, you can tell it to always make sure the "Exposure" is measured in a specific way.</li>
-                    </ul>
+                    <h5 class="text-xl font-extrabold text-teal-600">5. Settings, AI Models & Sovereign Architecture</h5>
+                    <p class="text-slate-600 text-sm leading-relaxed">Configure provider endpoints, API keys, temperature autonomy, top-P nucleus sampling, token budget, seed variance, and model checkpoints. Version 0.1.0 supports Google Gemini (with pinned models), Anthropic, OpenAI, Perplexity, Mistral AI, and Sovereign Local AI (Ollama, LM Studio, vLLM) for on-premises privacy.</p>
                 </section>
             </div>
         </div>
     `,
     versionRationaleView: `
-        <div class="p-8 space-y-6">
-            <h4 class="text-xl font-extrabold text-slate-800">Public Beta 0.1.1 Rationale</h4>
-            <p class="text-sm text-slate-600 leading-relaxed">Public Beta 0.1.1 focuses on **Augmented Intelligence** - the principle that the machine should guide, not replace, human scientific judgement. Key architectural changes include:</p>
-            <ul class="list-disc pl-6 text-sm text-slate-600 space-y-4">
-                <li><strong>Linguistic Matrix Syntax:</strong> Explicit deconstruction of measurement sites using the {matrix:connector:term} pattern ensures standardisation.</li>
-                <li><strong>Traceable Reasoning:</strong> Every AI interaction is logged and downloadable, meeting EBTC transparency requirements.</li>
-                <li><strong>Heuristic Integration:</strong> Expert domain knowledge is injected directly into the prompt context for higher-fidelity critiques.</li>
-                <li><strong>Assistance Control:</strong> Adjustable rigor levels to suit expert vs novice workflows.</li>
-                <li><strong>Open Engine Architecture:</strong> Support for Local LLMs (Ollama/LM Studio) and custom OpenAI-compatible endpoints.</li>
-            </ul>
+        <div class="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
+            <div class="border-b pb-4">
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">Post-Mortem & Methodological Commentary</span>
+                <h4 class="text-2xl font-extrabold text-slate-800 tracking-tight mt-2">PECO-Buddy Closed Pilot Alpha 0.1.0: Remediation & Architecture</h4>
+                <p class="text-xs text-slate-500 mt-1">Reference: Jan-Peter Nilsson (Sept 2026), <em>"Upstream API Drift and the Fragility of AI in Evidence Synthesis: A Post-Mortem Analysis of the PECO-Buddy Implementation Failure."</em> Evidence-Based Toxicology.</p>
+            </div>
+
+            <div class="space-y-4">
+                <h5 class="text-sm font-extrabold uppercase tracking-widest text-slate-700">1. Forensic Root-Cause Analysis (Beta 0.1.1 Failure Vectors)</h5>
+                <p class="text-xs text-slate-600 leading-relaxed">Following ethics clearance in August 2026, pre-flight audits revealed systemic operational failure across commercial preview infrastructure while local application code remained unchanged. Five failure vectors were identified and remediated:</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                        <strong class="text-rose-700 block">Vector 1: Dynamic Alias Rerouting</strong>
+                        <p class="text-slate-600">Targeting dynamic aliases (<code>gemini-flash-preview</code>) exposed backend to unannounced pointer shifts toward conversational builds (3.5/3.6/3.7), introducing narrative wrappers and ungrounded hallucinations.</p>
+                        <span class="text-teal-700 font-bold block pt-1">Fix: Pinned stable checkpoints (<code>gemini-3.1-flash-lite</code>, <code>gemini-flash-latest</code>) and local model support.</span>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                        <strong class="text-rose-700 block">Vector 2: Deprecated Response-Format Schemas</strong>
+                        <p class="text-slate-600">Upstream architectural updates silently ignored legacy formatting flags, returning discursive preambles (<em>"Certainly! Here is an evidence-based PECO..."</em>) that crashed JSON deserialization.</p>
+                        <span class="text-teal-700 font-bold block pt-1">Fix: Upgraded to @google/genai Type schema enforcement & resilient multi-pass JSON cleansing.</span>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                        <strong class="text-rose-700 block">Vector 3: Multi-Turn Parameter Stripping</strong>
+                        <p class="text-slate-600">SDK session abstractions retained conversation text but dropped systemInstruction and hyperparameters (temp 0.2, top-p 0.8), defaulting to unconstrained generalist behavior.</p>
+                        <span class="text-teal-700 font-bold block pt-1">Fix: Immutable zero-inference boundary re-injected on every inference turn.</span>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                        <strong class="text-rose-700 block">Vector 4: Botnet Mitigation & API Throttling</strong>
+                        <p class="text-slate-600">Screening heuristics classified rapid syntactically parallel toxicological batches as synthetic traffic, triggering socket terminations and <code>block_reason: OTHER</code>.</p>
+                        <span class="text-teal-700 font-bold block pt-1">Fix: Exponential backoff retries with jitter + zero-throttle sovereign on-premises execution.</span>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1 md:col-span-2">
+                        <strong class="text-rose-700 block">Vector 5: False-Positive Safety Railguards on Toxicological Lexicons</strong>
+                        <p class="text-slate-600">Lowered detection thresholds flagged legitimate hazard descriptors (<em>acute lethal hazard, organ system vulnerability, toxic metabolic intermediate, cord-blood lead</em>) as safety policy violations.</p>
+                        <span class="text-teal-700 font-bold block pt-1">Fix: Configured permissive academic research safety profile (<code>BLOCK_NONE</code> across all categories) and diagnostic guidance for sovereign local runtimes.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h5 class="text-sm font-extrabold uppercase tracking-widest text-slate-700">2. The Three-Tier Sovereign Evidence Architecture</h5>
+                <div class="space-y-3 text-xs">
+                    <div class="p-4 bg-teal-50/60 rounded-2xl border border-teal-100">
+                        <strong class="text-teal-800 block text-xs">Layer 1: Deterministic Ontological Grounding</strong>
+                        <p class="text-slate-600 mt-0.5">Pre-inference normalization validating chemical identifiers and CAS numbers against PubChem / EPA CompTox and mapping biological endpoints to MeSH, SNOMED CT, and LOINC.</p>
+                    </div>
+                    <div class="p-4 bg-teal-50/60 rounded-2xl border border-teal-100">
+                        <strong class="text-teal-800 block text-xs">Layer 2: Sovereign Open-Weight Inference</strong>
+                        <p class="text-slate-600 mt-0.5">Direct integration with institutional inference servers hosting frozen checkpoints (Llama 3.3, BioMistral, Meditron on Ollama or vLLM) ensuring weight immutability across multi-year systematic reviews.</p>
+                    </div>
+                    <div class="p-4 bg-teal-50/60 rounded-2xl border border-teal-100">
+                        <strong class="text-teal-800 block text-xs">Layer 3: Grammar-Constrained Logit Decoding & Atomization</strong>
+                        <p class="text-slate-600 mt-0.5">Strict schema compliance and token masking suppressing conversational preambles, enforcing 1:1 concept-to-code fidelity.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     `,
     copyrightView: `

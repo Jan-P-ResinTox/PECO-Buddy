@@ -1,11 +1,12 @@
-import { appState, dom } from './state.js';
+import { appState, dom, safeStorage } from './state.js';
 import { MODE_CONFIG } from './config.js';
 import { templates } from './views/templates.js';
 import { ToastService } from './components/toast.js';
 import { showModal } from './components/modal.js';
 import { initAuthorToolkitFlow } from './views/pecoToolkit.js';
-import { initReviewerToolkitView } from './views/reviewPeco.js';
-import { initNlpToolkitView } from './views/nlpToolkit.js';
+import { testProviderConnection } from './api/gemini.js';
+import { ActivityChip } from './components/activity.js';
+import { resumeDraft } from './session.js';
 
 // Global error logging for Dev-Team
 window.addEventListener('error', (event) => {
@@ -17,12 +18,13 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 /**
- * Main application entry point for PECO-Buddy Public Beta 0.1.1.
+ * Main application entry point for PECO-Buddy Closed Pilot Alpha 0.1.0.
  * Manages view routing, sidebar interactions, and global settings.
  */
 document.addEventListener('DOMContentLoaded', () => {
     try {
         const getEl = (id) => document.getElementById(id);
+        console.info('[PECO-Buddy] Closed Pilot Alpha 0.1.0 — build r9 (2026-09-26) loaded. If this line is missing after a hard refresh, your browser is running a stale bundle.');
 
         // Assign core DOM references
         dom.mainContent = getEl('main-content');
@@ -33,29 +35,50 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.appSidebar = getEl('app-sidebar');
         dom.appMainContent = getEl('app-main-content');
 
+        // Activity status chip: every AI phase, retry, and repair renders live.
+        ActivityChip.bind(getEl('activity-chip'));
+
         // Initial Typography Sync
         const applyFontSize = (size) => {
             document.body.classList.remove('font-size-sm', 'font-size-md', 'font-size-lg');
             document.body.classList.add(`font-size-${size}`);
             appState.fontSize = size;
-            localStorage.setItem('peco_buddy_font_size', size);
+            safeStorage.setItem('peco_buddy_font_size', size);
         };
         applyFontSize(appState.fontSize);
 
+        // Collapsible sidebar (icon rail mode, persisted)
+        const collapseBtn = getEl('sidebar-collapse-btn');
+        const collapseIcon = getEl('sidebar-collapse-icon');
+
+        const applySidebarCollapsed = (collapsed) => {
+            if (dom.appSidebar) dom.appSidebar.classList.toggle('sidebar-collapsed', collapsed);
+            if (dom.appMainContent) dom.appMainContent.classList.toggle('sidebar-collapsed', collapsed);
+            if (collapseIcon) collapseIcon.className = `fa-solid ${collapsed ? 'fa-angles-right' : 'fa-angles-left'} text-xs`;
+            if (collapseBtn) collapseBtn.setAttribute('data-tooltip', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+            safeStorage.setItem('peco_buddy_sidebar_collapsed', collapsed);
+        };
+
+        if (collapseBtn) {
+            collapseBtn.addEventListener('click', () => {
+                applySidebarCollapsed(!dom.appSidebar.classList.contains('sidebar-collapsed'));
+            });
+        }
+        applySidebarCollapsed(safeStorage.getItem('peco_buddy_sidebar_collapsed') === 'true');
+
         const renderToolkitView = () => {
             if (!dom.mainContent) return;
-            let toolkitHTML;
-            switch(appState.currentMode) {
-                case 'peco_toolkit': toolkitHTML = templates.pecoToolkit; break;
-                case 'review_peco': toolkitHTML = templates.reviewerToolkit; break;
-                case 'nlp': toolkitHTML = templates.nlpToolkit; break;
-                default: toolkitHTML = templates.pecoToolkit;
-            }
-            dom.mainContent.innerHTML = toolkitHTML;
 
-            if (appState.currentMode === 'nlp') initNlpToolkitView();
-            else if (appState.currentMode === 'review_peco') initReviewerToolkitView();
-            else initAuthorToolkitFlow();
+            // Session resume: a refresh no longer destroys the working draft.
+            // A corrupt draft never restores garbage — resumeDraft validates.
+            const resumed = resumeDraft();
+            if (resumed.applied) {
+                const when = resumed.savedAt ? new Date(resumed.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'earlier';
+                ToastService.show(`Session restored from your draft (saved ${when}).`, 'info');
+            }
+
+            dom.mainContent.innerHTML = templates.pecoToolkit;
+            initAuthorToolkitFlow();
 
             updateSidebar();
         };
@@ -88,15 +111,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fieldsOpenAI = modal.querySelector('#field-group-openai');
                 const fieldsAnthropic = modal.querySelector('#field-group-anthropic');
                 const fieldsPerplexity = modal.querySelector('#field-group-perplexity');
+                const fieldsMistral = modal.querySelector('#field-group-mistral');
                 const fieldsCustom = modal.querySelector('#field-group-custom');
 
                 const inputGeminiKey = modal.querySelector('#input-gemini-key');
+                const geminiModelSelect = modal.querySelector('#settings-gemini-model');
                 const inputOpenAiKey = modal.querySelector('#input-openai-key');
                 const inputOpenAiModel = modal.querySelector('#input-openai-model');
                 const inputAnthropicKey = modal.querySelector('#input-anthropic-key');
                 const inputAnthropicModel = modal.querySelector('#input-anthropic-model');
                 const inputPerplexityKey = modal.querySelector('#input-perplexity-key');
                 const inputPerplexityModel = modal.querySelector('#input-perplexity-model');
+                const inputMistralKey = modal.querySelector('#input-mistral-key');
+                const inputMistralModel = modal.querySelector('#input-mistral-model');
                 const inputCustomUrl = modal.querySelector('#input-custom-url');
                 const inputCustomModel = modal.querySelector('#input-custom-model');
                 const inputCustomKey = modal.querySelector('#input-custom-key');
@@ -126,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             seedSlider.value = num;
                             seedInput.value = num;
                             seedDisplay.textContent = num;
-                            localStorage.setItem('peco_buddy_seed', num);
+                            safeStorage.setItem('peco_buddy_seed', num);
                         }
                     };
 
@@ -134,6 +161,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     seedSlider.oninput = (e) => updateSeed(e.target.value);
                     seedInput.oninput = (e) => updateSeed(e.target.value);
+                }
+
+                // Top-P (Nucleus Sampling) Slider
+                const topPSlider = modal.querySelector('#settings-topp-slider');
+                const topPDisplay = modal.querySelector('#topp-level-display');
+
+                if (topPSlider && topPDisplay) {
+                    const updateTopP = (val) => {
+                        const num = parseFloat(val);
+                        if (!isNaN(num)) {
+                            const v = Math.min(1, Math.max(0.01, num));
+                            appState.topP = v;
+                            topPSlider.value = Math.round(v * 100);
+                            topPDisplay.textContent = v.toFixed(2);
+                            safeStorage.setItem('peco_buddy_top_p', v.toString());
+                        }
+                    };
+
+                    topPSlider.value = Math.round((appState.topP || 0.95) * 100);
+                    topPDisplay.textContent = (appState.topP || 0.95).toFixed(2);
+
+                    topPSlider.oninput = (e) => updateTopP(parseFloat(e.target.value) / 100);
+                }
+
+                // Max Tokens Slider
+                const maxTokensSlider = modal.querySelector('#settings-maxtokens-slider');
+                const maxTokensDisplay = modal.querySelector('#maxtokens-level-display');
+                const maxTokensInput = modal.querySelector('#settings-maxtokens-input');
+
+                if (maxTokensSlider && maxTokensDisplay && maxTokensInput) {
+                    const updateMaxTokens = (val) => {
+                        const num = parseInt(val, 10);
+                        if (!isNaN(num) && num >= 256) {
+                            const v = Math.min(65536, num);
+                            appState.maxTokens = v;
+                            maxTokensSlider.value = Math.min(16384, v);
+                            maxTokensInput.value = v;
+                            maxTokensDisplay.textContent = v;
+                            safeStorage.setItem('peco_buddy_max_tokens', v.toString());
+                        }
+                    };
+
+                    updateMaxTokens(appState.maxTokens || 4096);
+
+                    maxTokensSlider.oninput = (e) => updateMaxTokens(e.target.value);
+                    maxTokensInput.oninput = (e) => updateMaxTokens(e.target.value);
                 }
                 
                 if (assistSlider && assistDisplay) {
@@ -151,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     assistSlider.oninput = (e) => updateLabel(e.target.value);
                     assistSlider.onchange = (e) => {
                         appState.assistanceLevel = parseInt(e.target.value);
-                        localStorage.setItem('peco_buddy_assistance_level', e.target.value);
+                        safeStorage.setItem('peco_buddy_assistance_level', e.target.value);
                     };
                 }
 
@@ -169,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     tempSlider.onchange = (e) => {
                         const v = parseFloat(e.target.value) / 10.0;
                         appState.autonomyLevel = v;
-                        localStorage.setItem('peco_buddy_autonomy_level', v.toString());
+                        safeStorage.setItem('peco_buddy_autonomy_level', v.toString());
                     };
                 }
 
@@ -179,8 +252,57 @@ document.addEventListener('DOMContentLoaded', () => {
                     stripMetadataToggle.checked = appState.stripMetadata;
                     stripMetadataToggle.onchange = (e) => {
                         appState.stripMetadata = e.target.checked;
-                        localStorage.setItem('peco_buddy_strip_metadata', e.target.checked);
+                        safeStorage.setItem('peco_buddy_strip_metadata', e.target.checked);
                         ToastService.show(`Metadata stripping ${e.target.checked ? 'enabled' : 'disabled'}.`, 'info');
+                    };
+                }
+
+                // Matrix Tagging Toggle (semantic formatting)
+                const matrixTaggingToggle = modal.querySelector('#settings-matrix-tagging-toggle');
+                if (matrixTaggingToggle) {
+                    matrixTaggingToggle.checked = appState.matrixTagging !== false;
+                    matrixTaggingToggle.onchange = (e) => {
+                        appState.matrixTagging = e.target.checked;
+                        safeStorage.setItem('peco_buddy_matrix_tagging', e.target.checked);
+                        ToastService.show(`Matrix tagging ${e.target.checked ? 'enabled' : 'disabled'}. Applies to new AI calls and rendering.`, 'info');
+                    };
+                }
+
+                // Ontology Anchoring toggle + endpoint
+                const terminologyToggle = modal.querySelector('#settings-terminology-toggle');
+                if (terminologyToggle) {
+                    terminologyToggle.checked = appState.terminologyAnchoring !== false;
+                    terminologyToggle.onchange = (e) => {
+                        appState.terminologyAnchoring = e.target.checked;
+                        safeStorage.setItem('peco_buddy_terminology_anchoring', e.target.checked);
+                        ToastService.show(`Ontology anchoring ${e.target.checked ? 'enabled' : 'disabled'}. ${e.target.checked ? 'Suggested terms will resolve against MeSH.' : 'Terms stay unanchored.'}`, 'info');
+                    };
+                }
+                const terminologyBaseInput = modal.querySelector('#settings-terminology-mesh-base');
+                if (terminologyBaseInput) {
+                    terminologyBaseInput.value = appState.terminologyMeshBase || '';
+                    terminologyBaseInput.onchange = (e) => {
+                        appState.terminologyMeshBase = e.target.value.trim();
+                        safeStorage.setItem('peco_buddy_terminology_mesh_base', appState.terminologyMeshBase);
+                        ToastService.show(appState.terminologyMeshBase ? 'MeSH lookup endpoint updated.' : 'Reverted to the default NLM MeSH endpoint.', 'info');
+                    };
+                }
+
+                // Connection Self-Test buttons
+                const testAiBtn = modal.querySelector('#test-ai-connection-btn');
+                const aiStatus = modal.querySelector('#ai-connection-status');
+                if (testAiBtn && aiStatus) {
+                    testAiBtn.onclick = async () => {
+                        testAiBtn.disabled = true;
+                        aiStatus.innerHTML = '<span class="text-slate-500">AI provider: testing…</span>';
+                        try {
+                            const reply = await testProviderConnection();
+                            aiStatus.innerHTML = `<span class="text-emerald-700">AI provider: responded (“${reply}”)</span>`;
+                        } catch (err) {
+                            aiStatus.innerHTML = `<span class="text-rose-700">AI provider: failed — ${err.message}</span>`;
+                        } finally {
+                            testAiBtn.disabled = false;
+                        }
                     };
                 }
 
@@ -220,6 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         appState.heuristics.exposure = hExp.value;
                         appState.heuristics.population = hPop.value;
                         appState.heuristics.outcome = hOut.value;
+                        safeStorage.setItem('peco_buddy_heuristics', JSON.stringify(appState.heuristics));
                         ToastService.show('Applied heuristics updated and encoded.', 'success');
                     };
                 }
@@ -255,12 +378,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const initProviderUI = () => {
                     providerSelect.value = appState.aiProvider || 'gemini';
                     inputGeminiKey.value = appState.globalApiKey || '';
+                    if (geminiModelSelect) geminiModelSelect.value = appState.geminiModel || 'gemini-3.1-flash-lite';
                     inputOpenAiKey.value = appState.openaiKey || '';
                     inputOpenAiModel.value = appState.openaiModel || 'gpt-4o';
                     inputAnthropicKey.value = appState.anthropicKey || '';
                     inputAnthropicModel.value = appState.anthropicModel || 'claude-3-7-sonnet-20250219';
                     inputPerplexityKey.value = appState.perplexityKey || '';
                     inputPerplexityModel.value = appState.perplexityModel || 'sonar-pro';
+                    inputMistralKey.value = appState.mistralKey || '';
+                    inputMistralModel.value = appState.mistralModel || 'mistral-large-latest';
                     inputCustomUrl.value = appState.aiBaseUrl || '';
                     inputCustomModel.value = appState.aiModel || '';
                     inputCustomKey.value = appState.globalApiKey || ''; // Reuse global key storage
@@ -271,6 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         fieldsOpenAI.classList.toggle('hidden', val !== 'openai');
                         fieldsAnthropic.classList.toggle('hidden', val !== 'anthropic');
                         fieldsPerplexity.classList.toggle('hidden', val !== 'perplexity');
+                        fieldsMistral.classList.toggle('hidden', val !== 'mistral');
                         fieldsCustom.classList.toggle('hidden', val !== 'local');
                         
                         // Prefill defaults if empty when switching
@@ -286,29 +413,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     saveConfigBtn.onclick = () => {
                         const provider = providerSelect.value;
                         appState.aiProvider = provider;
-                        localStorage.setItem('peco_buddy_ai_provider', provider);
+                        safeStorage.setItem('peco_buddy_ai_provider', provider);
                         
                         if (provider === 'gemini') {
                             const key = inputGeminiKey.value.trim();
                             if (key) {
                                 appState.globalApiKey = key;
-                                localStorage.setItem('peco_buddy_api_key', key);
+                                safeStorage.setItem('peco_buddy_api_key', key);
+                            }
+                            if (geminiModelSelect) {
+                                appState.geminiModel = geminiModelSelect.value;
+                                safeStorage.setItem('peco_buddy_gemini_model', geminiModelSelect.value);
                             }
                         } else if (provider === 'openai') {
                             appState.openaiKey = inputOpenAiKey.value.trim();
                             appState.openaiModel = inputOpenAiModel.value.trim();
-                            localStorage.setItem('peco_buddy_openai_key', appState.openaiKey);
-                            localStorage.setItem('peco_buddy_openai_model', appState.openaiModel);
+                            safeStorage.setItem('peco_buddy_openai_key', appState.openaiKey);
+                            safeStorage.setItem('peco_buddy_openai_model', appState.openaiModel);
                         } else if (provider === 'anthropic') {
                             appState.anthropicKey = inputAnthropicKey.value.trim();
                             appState.anthropicModel = inputAnthropicModel.value.trim();
-                            localStorage.setItem('peco_buddy_anthropic_key', appState.anthropicKey);
-                            localStorage.setItem('peco_buddy_anthropic_model', appState.anthropicModel);
+                            safeStorage.setItem('peco_buddy_anthropic_key', appState.anthropicKey);
+                            safeStorage.setItem('peco_buddy_anthropic_model', appState.anthropicModel);
                         } else if (provider === 'perplexity') {
                             appState.perplexityKey = inputPerplexityKey.value.trim();
                             appState.perplexityModel = inputPerplexityModel.value.trim();
-                            localStorage.setItem('peco_buddy_perplexity_key', appState.perplexityKey);
-                            localStorage.setItem('peco_buddy_perplexity_model', appState.perplexityModel);
+                            safeStorage.setItem('peco_buddy_perplexity_key', appState.perplexityKey);
+                            safeStorage.setItem('peco_buddy_perplexity_model', appState.perplexityModel);
+                        } else if (provider === 'mistral') {
+                            appState.mistralKey = inputMistralKey.value.trim();
+                            appState.mistralModel = inputMistralModel.value.trim();
+                            safeStorage.setItem('peco_buddy_mistral_key', appState.mistralKey);
+                            safeStorage.setItem('peco_buddy_mistral_model', appState.mistralModel);
                         } else {
                             const url = inputCustomUrl.value.trim();
                             const model = inputCustomModel.value.trim();
@@ -318,9 +454,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             appState.aiModel = model;
                             appState.globalApiKey = key; // Save custom key in same global var
                             
-                            localStorage.setItem('peco_buddy_ai_base_url', url);
-                            localStorage.setItem('peco_buddy_ai_model', model);
-                            if(key) localStorage.setItem('peco_buddy_api_key', key);
+                            safeStorage.setItem('peco_buddy_ai_base_url', url);
+                            safeStorage.setItem('peco_buddy_ai_model', model);
+                            if(key) safeStorage.setItem('peco_buddy_api_key', key);
                         }
                         
                         ToastService.show('AI Configuration Saved', 'success');
@@ -334,15 +470,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (resetConfigBtn) {
                     resetConfigBtn.onclick = () => {
                         if (confirm('Reset all AI configuration to default?')) {
-                            localStorage.removeItem('peco_buddy_ai_provider');
-                            localStorage.removeItem('peco_buddy_ai_base_url');
-                            localStorage.removeItem('peco_buddy_ai_model');
-                            localStorage.removeItem('peco_buddy_api_key');
-                            
+                            safeStorage.removeItem('peco_buddy_ai_provider');
+                            safeStorage.removeItem('peco_buddy_ai_base_url');
+                            safeStorage.removeItem('peco_buddy_ai_model');
+                            safeStorage.removeItem('peco_buddy_api_key');
+                            safeStorage.removeItem('peco_buddy_gemini_model');
+                            safeStorage.removeItem('peco_buddy_mistral_key');
+                            safeStorage.removeItem('peco_buddy_mistral_model');
+
                             appState.aiProvider = 'gemini';
                             appState.aiBaseUrl = '';
                             appState.aiModel = '';
                             appState.globalApiKey = '';
+                            appState.geminiModel = 'gemini-3.1-flash-lite';
+                            appState.mistralKey = '';
+                            appState.mistralModel = '';
                             
                             initProviderUI();
                             ToastService.show('Configuration Reset', 'info');
@@ -358,8 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (modal, close) => {
                 const container = modal.querySelector('.modal-container');
                 const newFoot = document.createElement('div');
-                newFoot.className = 'modal-footer p-4 border-t flex justify-end';
-                newFoot.innerHTML = `<button class="bg-teal-600 text-white px-10 py-3 rounded-2xl font-extrabold uppercase text-[11px] tracking-widest shadow-lg hover:bg-teal-700 transition-all border-none">Done</button>`;
+                newFoot.className = 'modal-footer p-4 border-t flex justify-between items-center';
+                newFoot.innerHTML = `<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Build r9 · 2026-09-26</span><button class="bg-teal-600 text-white px-10 py-3 rounded-2xl font-extrabold uppercase text-[11px] tracking-widest shadow-lg hover:bg-teal-700 transition-all border-none">Done</button>`;
                 newFoot.querySelector('button').onclick = () => {
                     close();
                     if (appState.currentMode === 'peco_toolkit') renderToolkitView();
@@ -369,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const showUserManual = () => {
-            showModal('User Manual Public Beta 0.1.1', `<div class="modal-body p-0">${templates.userManualView}</div>`, (modal) => {
+            showModal('User Manual — PECO-Buddy Closed Pilot Alpha 0.1.0', `<div class="modal-body p-0">${templates.userManualView}</div>`, (modal) => {
                 const searchInput = modal.querySelector('#manual-search-input');
                 const sections = modal.querySelectorAll('.manual-section');
                 if (searchInput) {
